@@ -306,12 +306,15 @@
       saveQueue(queue);
     }
 
-    async function trySaveToSupabase(op, isRetry = false) {
+        async function trySaveToSupabase(op, isRetry = false) {
+      console.log("trySaveToSupabase", op, "online?", navigator.onLine);
+
       if (!navigator.onLine) {
         enqueueOp(op);
-        if (!isRetry) setMessage("Saved locally. Will sync when online.");
+        if (!isRetry) setMessage("Saved locally. No network, will sync when online.");
         return false;
       }
+
       try {
         const { error: delError } = await supabaseClient
           .from("evaluations")
@@ -328,8 +331,12 @@
         if (!isRetry) setMessage("Saved.");
         return true;
       } catch (e) {
+        console.error("Supabase save failed", e);
         enqueueOp(op);
-        if (!isRetry) setMessage("Saved locally. Will sync when online.");
+        if (!isRetry) {
+          const msg = e && e.message ? e.message : String(e);
+          setMessage("Saved locally, cloud error: " + msg, true);
+        }
         return false;
       }
     }
