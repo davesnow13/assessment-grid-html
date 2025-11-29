@@ -157,6 +157,7 @@
 
     <button id="applyLayoutBtn">Apply layout</button>
     <button id="loadBtn">Load saved marks</button>
+    <button id="exportBtn">Download CSV</button>
   </div>
 
   <div id="statusMsg" class="message"></div>
@@ -166,7 +167,7 @@
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Your real Supabase values
+    // Supabase configuration
     const SUPABASE_URL = "https://ynlzmerlrbgflcabvvfs.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbgciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inluem1lcmxyYmdmbGNhYnZ2ZnMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczMjk4MDQxMSwiZXhwIjoyMDQ4NTU2NDExfQ.6yLCGmMmKsShchJxsTLSLbIHwdKra0bxu4dRgs86jkE";
 
@@ -306,7 +307,7 @@
       saveQueue(queue);
     }
 
-        async function trySaveToSupabase(op, isRetry = false) {
+    async function trySaveToSupabase(op, isRetry = false) {
       console.log("trySaveToSupabase", op, "online?", navigator.onLine);
 
       if (!navigator.onLine) {
@@ -505,6 +506,54 @@
       processQueue();
     }
 
+    // ---------- CSV export (offline safe) ----------
+
+    function exportGroupToCsv(groupName) {
+      if (!groupName) {
+        setMessage("Enter a group name before exporting.", true);
+        return;
+      }
+
+      const state = loadGroupState(groupName);
+      const rows = [];
+
+      Object.entries(state).forEach(([key, status]) => {
+        const [student, zone, task] = key.split("|");
+        rows.push({
+          group_name: groupName,
+          student,
+          zone,
+          task,
+          status
+        });
+      });
+
+      if (rows.length === 0) {
+        setMessage("No marks saved for this group.", true);
+        return;
+      }
+
+      let csv = "group_name,student,zone,task,status\n";
+      rows.forEach((r) => {
+        const safeTask = '"' + r.task.replace(/"/g, '""') + '"';
+        csv += `${r.group_name},${r.student},${r.zone},${safeTask},${r.status}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      const date = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `${groupName}_${date}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setMessage("CSV downloaded.");
+    }
+
+    // ---------- Event listeners ----------
+
     document.getElementById("applyLayoutBtn").addEventListener("click", () => {
       currentStudents = parseStudents();
       renderTable();
@@ -517,6 +566,12 @@
       loadSavedMarks();
     });
 
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const groupName = groupNameInput.value.trim();
+      exportGroupToCsv(groupName);
+    });
+
+    // Initial render
     currentStudents = parseStudents();
     renderTable();
     processQueue();
