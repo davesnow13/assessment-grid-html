@@ -141,7 +141,7 @@
 <body>
   <h1>Snowboard Assessment</h1>
   <div class="small">
-    Tap a green square to set Inc, Con or Refi. Data is saved to Supabase automatically, with offline storage if the network is down.
+    Tap a green square to set Inc, Con or Refi. Data is saved to Supabase automatically when online.
   </div>
 
   <div class="controls">
@@ -157,7 +157,6 @@
 
     <button id="applyLayoutBtn">Apply layout</button>
     <button id="loadBtn">Load saved marks</button>
-    <button id="exportBtn">Download CSV</button>
   </div>
 
   <div id="statusMsg" class="message"></div>
@@ -167,7 +166,7 @@
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Supabase configuration
+    // Supabase configuration (same as you have now)
     const SUPABASE_URL = "https://ynlzmerlrbgflcabvvfs.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbgciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inluem1lcmxyYmdmbGNhYnZ2ZnMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczMjk4MDQxMSwiZXhwIjoyMDQ4NTU2NDExfQ.6yLCGmMmKsShchJxsTLSLbIHwdKra0bxu4dRgs86jkE";
 
@@ -202,10 +201,6 @@
 
     let currentStudents = [];
 
-    // Local storage keys
-    const LOCAL_STATE_PREFIX = "assessmentGrid_state_";   // per group
-    const LOCAL_QUEUE_KEY = "assessmentGrid_queue_v1";    // offline sync queue
-
     function parseStudents() {
       return studentsInput.value
         .split(",")
@@ -213,155 +208,15 @@
         .filter((s) => s.length > 0);
     }
 
-    function clearMessage() {
-      statusMsg.textContent = "";
-      statusMsg.className = "message";
-    }
-
     function setMessage(text, isError = false) {
       statusMsg.textContent = text;
       statusMsg.className = "message " + (isError ? "error" : "success");
     }
 
-    // ---------- Local state helpers ----------
-
-    function localKey(student, zone, task) {
-      return `${student}|${zone}|${task}`;
+    function clearMessage() {
+      statusMsg.textContent = "";
+      statusMsg.className = "message";
     }
-
-    function loadGroupState(groupName) {
-      try {
-        const raw = localStorage.getItem(LOCAL_STATE_PREFIX + groupName);
-        return raw ? JSON.parse(raw) : {};
-      } catch {
-        return {};
-      }
-    }
-
-    function saveGroupState(groupName, state) {
-      try {
-        localStorage.setItem(LOCAL_STATE_PREFIX + groupName, JSON.stringify(state));
-      } catch {
-        // ignore
-      }
-    }
-
-    function updateLocalState(groupName, student, zone, task, status) {
-      if (!groupName) return;
-      const key = localKey(student, zone, task);
-      const state = loadGroupState(groupName);
-      state[key] = status;
-      saveGroupState(groupName, state);
-    }
-
-    function applyLocalStateToUI(groupName) {
-      if (!groupName) return;
-      const state = loadGroupState(groupName);
-      Object.entries(state).forEach(([k, status]) => {
-        const [student, zone, task] = k.split("|");
-        const selectorAll =
-          `.status-inner[data-student="${encodeURIComponent(student)}"]` +
-          `[data-zone="${zone}"][data-task="${encodeURIComponent(task)}"]`;
-        const selectorOne = selectorAll + `[data-status="${status}"]`;
-
-        const cellToSelect = document.querySelector(selectorOne);
-        if (!cellToSelect) return;
-
-        document.querySelectorAll(selectorAll).forEach((node) => node.classList.remove("selected"));
-        cellToSelect.classList.add("selected");
-      });
-    }
-
-    // ---------- Queue helpers ----------
-
-    function loadQueue() {
-      try {
-        const raw = localStorage.getItem(LOCAL_QUEUE_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch {
-        return [];
-      }
-    }
-
-    function saveQueue(queue) {
-      try {
-        localStorage.setItem(LOCAL_QUEUE_KEY, JSON.stringify(queue));
-      } catch {
-        // ignore
-      }
-    }
-
-    function enqueueOp(op) {
-      let queue = loadQueue();
-      // remove older ops for same cell
-      queue = queue.filter(
-        (q) =>
-          !(
-            q.group_name === op.group_name &&
-            q.student === op.student &&
-            q.zone === op.zone &&
-            q.task === op.task
-          )
-      );
-      queue.push(op);
-      saveQueue(queue);
-    }
-
-    async function trySaveToSupabase(op, isRetry = false) {
-      console.log("trySaveToSupabase", op, "online?", navigator.onLine);
-
-      if (!navigator.onLine) {
-        enqueueOp(op);
-        if (!isRetry) setMessage("Saved locally. No network, will sync when online.");
-        return false;
-      }
-
-      try {
-        const { error: delError } = await supabaseClient
-          .from("evaluations")
-          .delete()
-          .eq("group_name", op.group_name)
-          .eq("student", op.student)
-          .eq("zone", op.zone)
-          .eq("task", op.task);
-        if (delError) throw delError;
-
-        const { error: insError } = await supabaseClient.from("evaluations").insert(op);
-        if (insError) throw insError;
-
-        if (!isRetry) setMessage("Saved.");
-        return true;
-      } catch (e) {
-        console.error("Supabase save failed", e);
-        enqueueOp(op);
-        if (!isRetry) {
-          const msg = e && e.message ? e.message : String(e);
-          setMessage("Saved locally, cloud error: " + msg, true);
-        }
-        return false;
-      }
-    }
-
-    async function processQueue() {
-      if (!navigator.onLine) return;
-      let queue = loadQueue();
-      if (queue.length === 0) return;
-
-      const remaining = [];
-      setMessage("Syncing offline changes...");
-      for (const op of queue) {
-        const ok = await trySaveToSupabase(op, true);
-        if (!ok) remaining.push(op);
-      }
-      saveQueue(remaining);
-      if (remaining.length === 0) {
-        setMessage("Offline changes synced.");
-      } else {
-        setMessage("Some changes still saved locally. Will retry.", true);
-      }
-    }
-
-    window.addEventListener("online", processQueue);
 
     // ---------- Table rendering ----------
 
@@ -379,12 +234,14 @@
 
       let html = "<table>";
 
+      // Header row with student names
       html += "<tr><th class='task-col'>Task</th>";
       currentStudents.forEach((student) => {
         html += `<th class="student-group-header" colspan="${STATUSES.length}">${student}</th>`;
       });
       html += "</tr>";
 
+      // Row with Inc / Con / Refi labels
       html += "<tr><th></th>";
       currentStudents.forEach(() => {
         STATUSES.forEach((status) => {
@@ -393,6 +250,7 @@
       });
       html += "</tr>";
 
+      // Tasks grouped by zone
       let lastZone = null;
 
       TASKS.forEach((task) => {
@@ -428,9 +286,9 @@
       document.querySelectorAll(".status-inner").forEach((el) => {
         el.addEventListener("click", onStatusClick);
       });
-
-      applyLocalStateToUI(groupName);
     }
+
+    // ---------- Click handler: save to Supabase ----------
 
     async function onStatusClick(event) {
       const el = event.currentTarget;
@@ -440,8 +298,12 @@
       const status = el.dataset.status;
       const groupName = groupNameInput.value.trim();
 
-      if (!groupName) return;
+      if (!groupName) {
+        setMessage("Enter a group name before marking.", true);
+        return;
+      }
 
+      // Toggle UI for this student/zone/task
       const selectorAll =
         `.status-inner[data-student="${encodeURIComponent(student)}"]` +
         `[data-zone="${zone}"][data-task="${encodeURIComponent(taskLabel)}"]`;
@@ -449,45 +311,70 @@
       document.querySelectorAll(selectorAll).forEach((node) => node.classList.remove("selected"));
       el.classList.add("selected");
 
-      updateLocalState(groupName, student, zone, taskLabel, status);
+      setMessage("Saving...");
 
-      const op = {
-        group_name: groupName,
-        student,
-        zone,
-        task: taskLabel,
-        status
-      };
+      try {
+        // Remove any existing row for this cell
+        const { error: delError } = await supabaseClient
+          .from("evaluations")
+          .delete()
+          .eq("group_name", groupName)
+          .eq("student", student)
+          .eq("zone", zone)
+          .eq("task", taskLabel);
 
-      await trySaveToSupabase(op);
+        if (delError) {
+          throw delError;
+        }
+
+        // Insert new row
+        const { error: insError } = await supabaseClient.from("evaluations").insert({
+          group_name: groupName,
+          student,
+          zone,
+          task: taskLabel,
+          status
+        });
+
+        if (insError) {
+          throw insError;
+        }
+
+        setMessage("Saved.", false);
+      } catch (e) {
+        console.error("Supabase save failed", e);
+        setMessage("Could not save mark.", true);
+      }
     }
+
+    // ---------- Load existing marks for a group ----------
 
     async function loadSavedMarks() {
       const groupName = groupNameInput.value.trim();
-      if (!groupName) return;
-
-      if (!navigator.onLine) {
-        applyLocalStateToUI(groupName);
-        setMessage("Offline: showing marks stored on this device.");
+      if (!groupName) {
+        setMessage("Enter a group name before loading.", true);
         return;
       }
 
       setMessage("Loading...");
+
       const { data, error } = await supabaseClient
         .from("evaluations")
         .select("*")
         .eq("group_name", groupName);
 
       if (error) {
-        setMessage("Failed to load from cloud. Using local marks only.", true);
-        applyLocalStateToUI(groupName);
+        console.error("Load failed", error);
+        setMessage("Failed to load marks from Supabase.", true);
         return;
       }
 
+      // Clear all selections
       document.querySelectorAll(".status-inner").forEach((node) => {
         node.classList.remove("selected");
       });
 
+      // Apply loaded selections
       data.forEach((row) => {
         const selectorAll =
           `.status-inner[data-student="${encodeURIComponent(row.student)}"]` +
@@ -500,56 +387,7 @@
         }
       });
 
-      applyLocalStateToUI(groupName);
-
-      setMessage("Loaded.");
-      processQueue();
-    }
-
-    // ---------- CSV export (offline safe) ----------
-
-    function exportGroupToCsv(groupName) {
-      if (!groupName) {
-        setMessage("Enter a group name before exporting.", true);
-        return;
-      }
-
-      const state = loadGroupState(groupName);
-      const rows = [];
-
-      Object.entries(state).forEach(([key, status]) => {
-        const [student, zone, task] = key.split("|");
-        rows.push({
-          group_name: groupName,
-          student,
-          zone,
-          task,
-          status
-        });
-      });
-
-      if (rows.length === 0) {
-        setMessage("No marks saved for this group.", true);
-        return;
-      }
-
-      let csv = "group_name,student,zone,task,status\n";
-      rows.forEach((r) => {
-        const safeTask = '"' + r.task.replace(/"/g, '""') + '"';
-        csv += `${r.group_name},${r.student},${r.zone},${safeTask},${r.status}\n`;
-      });
-
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-
-      const date = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `${groupName}_${date}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      setMessage("CSV downloaded.");
+      setMessage("Loaded.", false);
     }
 
     // ---------- Event listeners ----------
@@ -566,15 +404,9 @@
       loadSavedMarks();
     });
 
-    document.getElementById("exportBtn").addEventListener("click", () => {
-      const groupName = groupNameInput.value.trim();
-      exportGroupToCsv(groupName);
-    });
-
-    // Initial render
+    // Initial render with default students
     currentStudents = parseStudents();
     renderTable();
-    processQueue();
   </script>
 </body>
 </html>
