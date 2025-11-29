@@ -129,6 +129,11 @@
       This page reads from the <code>evaluations</code> table in Supabase.
       Use filters to generate a group report or a single participant report, then use
       the browser print dialog to save as PDF.
+      <br />
+      Status legend:
+      <strong>Inconsistent</strong> (Inc),
+      <strong>Consistent</strong> (Con),
+      <strong>Refined</strong> (Refi).
     </div>
 
     <div class="controls">
@@ -220,6 +225,14 @@
     });
 
     groupSelect.addEventListener("change", updateStudentOptionsForSelectedGroup);
+
+    // Map short codes to full labels for reports
+    function expandStatus(stat) {
+      if (stat === "Inc") return "Inconsistent";
+      if (stat === "Con") return "Consistent";
+      if (stat === "Refi") return "Refined";
+      return stat || "";
+    }
 
     async function initialLoadForFilters() {
       clearMessage();
@@ -326,7 +339,7 @@
         table.style.display = "none";
         return;
       }
-      
+
       currentRows = data || [];
       renderTable(currentRows);
 
@@ -361,7 +374,7 @@
           <td>${escapeHtml(row.student || "")}</td>
           <td>${row.zone != null ? row.zone : ""}</td>
           <td>${escapeHtml(row.task || "")}</td>
-          <td>${escapeHtml(row.status || "")}</td>
+          <td>${escapeHtml(expandStatus(row.status))}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -372,14 +385,22 @@
     function exportCSV() {
       if (!currentRows || currentRows.length === 0) return;
 
-      const headers = ["group_name", "student", "zone", "task", "status"];
+      const headers = ["group_name", "student", "zone", "task", "status_full"];
       const lines = [];
 
       lines.push(headers.join(","));
 
       currentRows.forEach(row => {
+        const rowObj = {
+          group_name: row.group_name || "",
+          student: row.student || "",
+          zone: row.zone != null ? row.zone : "",
+          task: row.task || "",
+          status_full: expandStatus(row.status)
+        };
+
         const values = headers.map(key => {
-          let val = row[key];
+          let val = rowObj[key];
           if (val == null) val = "";
           val = String(val).replace(/"/g, '""');
           if (val.search(/[",\n]/) !== -1) {
