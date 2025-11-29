@@ -110,14 +110,25 @@
       cursor: pointer;
     }
 
-    .status-inner.selected {
-      background: #2e7d32;
-      border-color: #1b5e20;
+    /* Colour coding, same idea as admin page */
+    .status-inc {
+      background-color: #ffe5e5 !important;  /* light red */
+      border-color: #d46a6a !important;
+    }
+
+    .status-con {
+      background-color: #fff8d5 !important;  /* light yellow */
+      border-color: #d6c55b !important;
+    }
+
+    .status-refi {
+      background-color: #e2f6dd !important;  /* light green */
+      border-color: #58a862 !important;
     }
 
     .status-inner.selected::after {
       content: "✓";
-      color: white;
+      color: #000;
       font-size: 0.8rem;
     }
 
@@ -253,15 +264,12 @@
         return;
       }
 
-      // Set group name field
       groupNameInput.value = selectedGroup;
 
-      // Rebuild students list from local state for that group
       setStudentsFromLocalState(selectedGroup);
 
       currentStudents = parseStudents();
       renderTable();
-      // Load merged local + cloud for that group
       loadSavedMarks();
     });
 
@@ -313,7 +321,6 @@
 
     function refreshGroupSelectOptions() {
       const list = loadGroupList().slice().sort((a, b) => a.localeCompare(b));
-      // Clear existing options except first
       while (groupSelect.options.length > 1) {
         groupSelect.remove(1);
       }
@@ -383,8 +390,13 @@
         const selectorOne = selectorAll + `[data-status="${status}"]`;
         const cellToSelect = document.querySelector(selectorOne);
         if (!cellToSelect) return;
-        document.querySelectorAll(selectorAll).forEach(node => node.classList.remove("selected"));
+        document.querySelectorAll(selectorAll).forEach(node => {
+          node.classList.remove("selected", "status-inc", "status-con", "status-refi");
+        });
         cellToSelect.classList.add("selected");
+        if (status === "Inc") cellToSelect.classList.add("status-inc");
+        if (status === "Con") cellToSelect.classList.add("status-con");
+        if (status === "Refi") cellToSelect.classList.add("status-refi");
       });
     }
 
@@ -544,6 +556,8 @@
       document.querySelectorAll(".status-inner").forEach(el => {
         el.addEventListener("click", onStatusClick);
       });
+
+      applyLocalStateToUI(groupName);
     }
 
     async function onStatusClick(event) {
@@ -560,8 +574,13 @@
         `.status-inner[data-student="${encodeURIComponent(student)}"]` +
         `[data-zone="${zone}"][data-task="${encodeURIComponent(taskLabel)}"]`;
 
-      document.querySelectorAll(selectorAll).forEach(node => node.classList.remove("selected"));
+      document.querySelectorAll(selectorAll).forEach(node => {
+        node.classList.remove("selected", "status-inc", "status-con", "status-refi");
+      });
       el.classList.add("selected");
+      if (status === "Inc") el.classList.add("status-inc");
+      if (status === "Con") el.classList.add("status-con");
+      if (status === "Refi") el.classList.add("status-refi");
 
       updateLocalState(groupName, student, zone, taskLabel, status);
 
@@ -616,7 +635,9 @@
 
       saveGroupState(groupName, mergedState);
 
-      document.querySelectorAll(".status-inner").forEach(node => node.classList.remove("selected"));
+      document.querySelectorAll(".status-inner").forEach(node => {
+        node.classList.remove("selected", "status-inc", "status-con", "status-refi");
+      });
       applyLocalStateToUI(groupName);
 
       setMessage("Loaded. Local marks kept where present.");
