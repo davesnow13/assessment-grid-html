@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Snowboard Assessment</title>
+  <title>Snowboard Assessment Grid</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
@@ -141,7 +141,7 @@
 <body>
   <h1>Snowboard Assessment</h1>
   <div class="small">
-    Tap a green square to set Inc, Con or Refi. Data is saved to Supabase automatically when online.
+    Tap a green square to set Inc, Con or Refi. Data is saved to Supabase automatically.
   </div>
 
   <div class="controls">
@@ -166,9 +166,9 @@
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Supabase configuration (same as you have now)
-    const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbgciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inluem1lcmxyYmdmbGNhYnZ2ZnMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczMjk4MDQxMSwiZXhwIjoyMDQ4NTU2NDExfQ.6yLCGmMmKsShchJxsTLSLbIHwdKra0bxu4dRgs86jkE";
+    // 🔥 REPLACE THESE WITH YOUR REAL VALUES:
+    const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR-ANON-KEY";
 
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -201,16 +201,23 @@
 
     let currentStudents = [];
 
+    document.getElementById("applyLayoutBtn").addEventListener("click", () => {
+      currentStudents = parseStudents();
+      renderTable();
+      clearMessage();
+    });
+
+    document.getElementById("loadBtn").addEventListener("click", () => {
+      currentStudents = parseStudents();
+      renderTable();
+      loadSavedMarks();
+    });
+
     function parseStudents() {
       return studentsInput.value
         .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
-    }
-
-    function setMessage(text, isError = false) {
-      statusMsg.textContent = text;
-      statusMsg.className = "message " + (isError ? "error" : "success");
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
     }
 
     function clearMessage() {
@@ -218,11 +225,13 @@
       statusMsg.className = "message";
     }
 
-    // ---------- Table rendering ----------
+    function setMessage(text, isError = false) {
+      statusMsg.textContent = text;
+      statusMsg.className = "message " + (isError ? "error" : "success");
+    }
 
     function renderTable() {
-      const groupName = groupNameInput.value.trim();
-      if (!groupName) {
+      if (!groupNameInput.value.trim()) {
         setMessage("Enter a group name first.", true);
         return;
       }
@@ -234,40 +243,37 @@
 
       let html = "<table>";
 
-      // Header row with student names
       html += "<tr><th class='task-col'>Task</th>";
-      currentStudents.forEach((student) => {
+      currentStudents.forEach(student => {
         html += `<th class="student-group-header" colspan="${STATUSES.length}">${student}</th>`;
       });
       html += "</tr>";
 
-      // Row with Inc / Con / Refi labels
       html += "<tr><th></th>";
       currentStudents.forEach(() => {
-        STATUSES.forEach((status) => {
+        STATUSES.forEach(status => {
           html += `<th class="status-header">${status}</th>`;
         });
       });
       html += "</tr>";
 
-      // Tasks grouped by zone
       let lastZone = null;
 
-      TASKS.forEach((task) => {
+      TASKS.forEach(task => {
         if (task.zone !== lastZone) {
-          html += `<tr><th class="zone-header" colspan="${
-            1 + currentStudents.length * STATUSES.length
-          }">Zone ${task.zone}</th></tr>`;
+          html += `<tr><th class="zone-header" colspan="${1 + currentStudents.length * STATUSES.length}">Zone ${task.zone}</th></tr>`;
           lastZone = task.zone;
         }
 
         html += `<tr><td class="task-col">${task.label}</td>`;
 
-        currentStudents.forEach((student) => {
-          STATUSES.forEach((status) => {
+        currentStudents.forEach(student => {
+          STATUSES.forEach(status => {
+            const id = cellKey(student, task.zone, task.label, status);
             html += `
               <td class="status-cell">
                 <div class="status-inner"
+                     id="${id}"
                      data-student="${encodeURIComponent(student)}"
                      data-zone="${task.zone}"
                      data-task="${encodeURIComponent(task.label)}"
@@ -283,12 +289,14 @@
       html += "</table>";
       tableContainer.innerHTML = html;
 
-      document.querySelectorAll(".status-inner").forEach((el) => {
+      document.querySelectorAll(".status-inner").forEach(el => {
         el.addEventListener("click", onStatusClick);
       });
     }
 
-    // ---------- Click handler: save to Supabase ----------
+    function cellKey(student, zone, taskLabel, status) {
+      return `cell_${encodeURIComponent(student)}_${zone}_${encodeURIComponent(taskLabel)}_${status}`;
+    }
 
     async function onStatusClick(event) {
       const el = event.currentTarget;
@@ -298,113 +306,62 @@
       const status = el.dataset.status;
       const groupName = groupNameInput.value.trim();
 
-      if (!groupName) {
-        setMessage("Enter a group name before marking.", true);
-        return;
-      }
+      if (!groupName) return;
 
-      // Toggle UI for this student/zone/task
-      const selectorAll =
-        `.status-inner[data-student="${encodeURIComponent(student)}"]` +
-        `[data-zone="${zone}"][data-task="${encodeURIComponent(taskLabel)}"]`;
-
-      document.querySelectorAll(selectorAll).forEach((node) => node.classList.remove("selected"));
+      document.querySelectorAll(
+        `.status-inner[data-student="${encodeURIComponent(student)}"][data-zone="${zone}"][data-task="${encodeURIComponent(taskLabel)}"]`
+      ).forEach(node => {
+        node.classList.remove("selected");
+      });
       el.classList.add("selected");
 
-      setMessage("Saving...");
+      await supabaseClient.from("evaluations")
+        .delete()
+        .eq("group_name", groupName)
+        .eq("student", student)
+        .eq("zone", zone)
+        .eq("task", taskLabel);
 
-      try {
-        // Remove any existing row for this cell
-        const { error: delError } = await supabaseClient
-          .from("evaluations")
-          .delete()
-          .eq("group_name", groupName)
-          .eq("student", student)
-          .eq("zone", zone)
-          .eq("task", taskLabel);
+      const { error } = await supabaseClient.from("evaluations").insert({
+        group_name: groupName,
+        student,
+        zone,
+        task: taskLabel,
+        status
+      });
 
-        if (delError) {
-          throw delError;
-        }
-
-        // Insert new row
-        const { error: insError } = await supabaseClient.from("evaluations").insert({
-          group_name: groupName,
-          student,
-          zone,
-          task: taskLabel,
-          status
-        });
-
-        if (insError) {
-          throw insError;
-        }
-
-        setMessage("Saved.", false);
-      } catch (e) {
-        console.error("Supabase save failed", e);
-        setMessage("Could not save mark.", true);
-      }
+      if (error) setMessage("Could not save mark.", true);
+      else setMessage("Saved.");
     }
-
-    // ---------- Load existing marks for a group ----------
 
     async function loadSavedMarks() {
       const groupName = groupNameInput.value.trim();
-      if (!groupName) {
-        setMessage("Enter a group name before loading.", true);
-        return;
-      }
+      if (!groupName) return;
 
       setMessage("Loading...");
-
       const { data, error } = await supabaseClient
         .from("evaluations")
         .select("*")
         .eq("group_name", groupName);
 
       if (error) {
-        console.error("Load failed", error);
-        setMessage("Failed to load marks from Supabase.", true);
+        setMessage("Failed to load.", true);
         return;
       }
 
-      // Clear all selections
-      document.querySelectorAll(".status-inner").forEach((node) => {
+      document.querySelectorAll(".status-inner").forEach(node => {
         node.classList.remove("selected");
       });
 
-      // Apply loaded selections
-      data.forEach((row) => {
-        const selectorAll =
-          `.status-inner[data-student="${encodeURIComponent(row.student)}"]` +
-          `[data-zone="${row.zone}"][data-task="${encodeURIComponent(row.task)}"]`;
-        const selectorOne = selectorAll + `[data-status="${row.status}"]`;
-        const cell = document.querySelector(selectorOne);
-        if (cell) {
-          document.querySelectorAll(selectorAll).forEach((node) => node.classList.remove("selected"));
-          cell.classList.add("selected");
-        }
+      data.forEach(row => {
+        const sel = `.status-inner[data-student="${encodeURIComponent(row.student)}"][data-zone="${row.zone}"][data-task="${encodeURIComponent(row.task)}"][data-status="${row.status}"]`;
+        const cell = document.querySelector(sel);
+        if (cell) cell.classList.add("selected");
       });
 
-      setMessage("Loaded.", false);
+      setMessage("Loaded.");
     }
 
-    // ---------- Event listeners ----------
-
-    document.getElementById("applyLayoutBtn").addEventListener("click", () => {
-      currentStudents = parseStudents();
-      renderTable();
-      clearMessage();
-    });
-
-    document.getElementById("loadBtn").addEventListener("click", () => {
-      currentStudents = parseStudents();
-      renderTable();
-      loadSavedMarks();
-    });
-
-    // Initial render with default students
     currentStudents = parseStudents();
     renderTable();
   </script>
