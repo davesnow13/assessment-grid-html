@@ -1,1 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Snowboard Assessments – Admin View</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 16px;
+      background: #f4f6f8;
+    }
 
+    h1 {
+      margin-bottom: 4px;
+    }
+
+    .small {
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    .controls {
+      margin: 8px 0 16px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 0.9rem;
+    }
+
+    input[type="text"], select {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 0.9rem;
+    }
+
+    button {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid #0b6b2f;
+      background: #0f9d3d;
+      color: white;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    button.secondary {
+      background: #5b636a;
+      border-color: #4a5056;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: white;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #999;
+      padding: 4px 6px;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    th {
+      background: #e6eef7;
+    }
+
+    .message {
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: #444;
+    }
+
+    .error {
+      color: #b00020;
+    }
+
+    .success {
+      color: #1b5e20;
+    }
+
+    .no-print {
+      /* Hidden in print view */
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 8px;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      table {
+        font-size: 0.8rem;
+      }
+
+      h1 {
+        font-size: 1.2rem;
+        margin-bottom: 6px;
+      }
+
+      .small {
+        font-size: 0.75rem;
+        color: #333;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <h1>Snowboard Assessments – Admin View</h1>
+    <div class="small">
+      This page reads from the <code>evaluations</code> table in Supabase.
+      Use filters to generate a group report or a single participant report, then use
+      the browser print dialog to save as PDF.
+    </div>
+
+    <div class="controls">
+      <label>
+        Group:
+        <select id="groupSelect">
+          <option value="">All groups</option>
+        </select>
+      </label>
+
+      <label>
+        Student:
+        <select id="studentSelect">
+          <option value="">All students</option>
+        </select>
+      </label>
+
+      <button id="loadBtn">Load data</button>
+      <button id="clearFiltersBtn" class="secondary">Clear filters</button>
+      <button id="exportCsvBtn" class="secondary" disabled>Export CSV</button>
+      <button id="printBtn" class="secondary" disabled>Print current view (PDF)</button>
+    </div>
+  </div>
+
+  <div id="statusMsg" class="message"></div>
+
+  <h1 class="print-only" style="display:none;">Snowboard Assessments</h1>
+
+  <table id="resultsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Group</th>
+        <th>Student</th>
+        <th>Zone</th>
+        <th>Task</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Use the same values as in index.html
+    const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
+
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const groupSelect = document.getElementById("groupSelect");
+    const studentSelect = document.getElementById("studentSelect");
+    const loadBtn = document.getElementById("loadBtn");
+    const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+    const exportCsvBtn = document.getElementById("exportCsvBtn");
+    const printBtn = document.getElementById("printBtn");
+    const statusMsg = document.getElementById("statusMsg");
+    const table = document.getElementById("resultsTable");
+    const tbody = table.querySelector("tbody");
+
+    let currentRows = [];
+    let allRowsForFilters = [];
+
+    function setMessage(text, isError = false) {
+      statusMsg.textContent = text;
+      statusMsg.className = "message " + (isError ? "error" : "success");
+    }
+
+    function clearMessage() {
+      statusMsg.textContent = "";
+      statusMsg.className = "message";
+    }
+
+    loadBtn.addEventListener("click", loadData);
+    clearFiltersBtn.addEventListener("click", () => {
+      groupSelect.value = "";
+      studentSelect.innerHTML = "";
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "All students";
+      studentSelect.appendChild(opt);
+      loadData();
+    });
+    exportCsvBtn.addEventListener("click", exportCSV);
+    printBtn.addEventListener("click", () => {
+      if (!currentRows || currentRows.length === 0) return;
+      window.print();
+    });
+
+    groupSelect.addEventListener("change", updateStudentOptionsForSelectedGroup);
+
+    async function initialLoadForFilters() {
+      clearMessage();
+      setMessage("Loading groups for filters...");
+
+      const { data, error } = await supabaseClient
+        .from("evaluations")
+        .select("group_name, student, zone, task, status");
+
+      if (error) {
+        console.error(error);
+        setMessage("Failed to load data for filters: " + error.message, true);
+        return;
+      }
+
+      allRowsForFilters = data || [];
+
+      const groupSet = new Set();
+      allRowsForFilters.forEach(row => {
+        if (row.group_name) groupSet.add(row.group_name);
+      });
+
+      const sortedGroups = Array.from(groupSet).sort((a, b) => a.localeCompare(b));
+
+      while (groupSelect.options.length > 1) {
+        groupSelect.remove(1);
+      }
+
+      sortedGroups.forEach(g => {
+        const opt = document.createElement("option");
+        opt.value = g;
+        opt.textContent = g;
+        groupSelect.appendChild(opt);
+      });
+
+      updateStudentOptionsForSelectedGroup();
+      setMessage("Groups loaded. Choose filters and click Load data.");
+    }
+
+    function updateStudentOptionsForSelectedGroup() {
+      const selectedGroup = groupSelect.value;
+      const studentSet = new Set();
+
+      if (selectedGroup) {
+        allRowsForFilters.forEach(row => {
+          if (row.group_name === selectedGroup && row.student) {
+            studentSet.add(row.student);
+          }
+        });
+      } else {
+        allRowsForFilters.forEach(row => {
+          if (row.student) studentSet.add(row.student);
+        });
+      }
+
+      const sortedStudents = Array.from(studentSet).sort((a, b) => a.localeCompare(b));
+
+      studentSelect.innerHTML = "";
+      const optAll = document.createElement("option");
+      optAll.value = "";
+      optAll.textContent = "All students";
+      studentSelect.appendChild(optAll);
+
+      sortedStudents.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s;
+        studentSelect.appendChild(opt);
+      });
+    }
+
+    async function loadData() {
+      clearMessage();
+      loadBtn.disabled = true;
+      exportCsvBtn.disabled = true;
+      printBtn.disabled = true;
+      setMessage("Loading data...");
+
+      let query = supabaseClient
+        .from("evaluations")
+        .select("*")
+        .order("group_name", { ascending: true })
+        .order("student", { ascending: true })
+        .order("zone", { ascending: true })
+        .order("task", { ascending: true });
+
+      const groupVal = groupSelect.value;
+      const studentVal = studentSelect.value;
+
+      if (groupVal) {
+        query = query.eq("group_name", groupVal);
+      }
+
+      if (studentVal) {
+        query = query.eq("student", studentVal);
+      }
+
+      const { data, error } = await query;
+      loadBtn.disabled = false;
+
+      if (error) {
+        console.error(error);
+        setMessage("Failed to load data: " + error.message, true);
+        table.style.display = "none";
+        return;
+      }
+
+      currentRows = data || [];
+      renderTable(currentRows);
+
+      if (currentRows.length === 0) {
+        setMessage("No rows found for this filter.");
+        exportCsvBtn.disabled = true;
+        printBtn.disabled = true;
+      } else {
+        if (groupVal && studentVal) {
+          setMessage("Loaded " + currentRows.length + " rows for " + studentVal + " in " + groupVal + ".");
+        } else if (groupVal) {
+          setMessage("Loaded " + currentRows.length + " rows for group " + groupVal + ".");
+        } else {
+          setMessage("Loaded " + currentRows.length + " rows across all groups.");
+        }
+        exportCsvBtn.disabled = false;
+        printBtn.disabled = false;
+      }
+    }
+
+    function renderTable(rows) {
+      tbody.innerHTML = "";
+      if (!rows || rows.length === 0) {
+        table.style.display = "none";
+        return;
+      }
+
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(row.group_name || "")}</td>
+          <td>${escapeHtml(row.student || "")}</td>
+          <td>${row.zone != null ? row.zone : ""}</td>
+          <td>${escapeHtml(row.task || "")}</td>
+          <td>${escapeHtml(row.status || "")}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      table.style.display = "";
+    }
+
+    function exportCSV() {
+      if (!currentRows || currentRows.length === 0) return;
+
+      const headers = ["group_name", "student", "zone", "task", "status"];
+      const lines = [];
+
+      lines.push(headers.join(","));
+
+      currentRows.forEach(row => {
+        const values = headers.map(key => {
+          let val = row[key];
+          if (val == null) val = "";
+          val = String(val).replace(/"/g, '""');
+          if (val.search(/[",\n]/) !== -1) {
+            val = '"' + val + '"';
+          }
+          return val;
+        });
+        lines.push(values.join(","));
+      });
+
+      const csvContent = lines.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "snowboard_evaluations_admin.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    initialLoadForFilters();
+  </script>
+</body>
+</html>
