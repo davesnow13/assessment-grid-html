@@ -32,10 +32,11 @@
       font-size: 0.9rem;
     }
 
-    input[type="text"] {
+    input[type="text"], select {
       padding: 4px 8px;
       border-radius: 4px;
       border: 1px solid #ccc;
+      font-size: 0.9rem;
     }
 
     button {
@@ -167,6 +168,16 @@
     <button id="exportBtn" class="secondary">Export CSV (this group)</button>
   </div>
 
+  <div class="controls">
+    <label>
+      Saved groups:
+      <select id="groupSelect">
+        <option value="">Select a saved group</option>
+      </select>
+    </label>
+    <button id="useGroupBtn" class="secondary">Use group</button>
+  </div>
+
   <div id="statusMsg" class="message"></div>
 
   <div id="tableContainer"></div>
@@ -208,27 +219,51 @@
     const tableContainer = document.getElementById("tableContainer");
     const statusMsg = document.getElementById("statusMsg");
     const exportBtn = document.getElementById("exportBtn");
+    const groupSelect = document.getElementById("groupSelect");
+    const useGroupBtn = document.getElementById("useGroupBtn");
 
     let currentStudents = [];
 
     // Local storage keys
     const LOCAL_STATE_PREFIX = "assessmentGrid_state_";   // per group
     const LOCAL_QUEUE_KEY = "assessmentGrid_queue_v1";    // offline sync queue
+    const LOCAL_GROUPS_KEY = "assessmentGrid_groups";     // list of known groups
 
     document.getElementById("applyLayoutBtn").addEventListener("click", () => {
       currentStudents = parseStudents();
       renderTable();
       clearMessage();
+      registerGroupName(groupNameInput.value.trim());
       applyLocalStateToUI(groupNameInput.value.trim());
     });
 
     document.getElementById("loadBtn").addEventListener("click", () => {
       currentStudents = parseStudents();
       renderTable();
+      registerGroupName(groupNameInput.value.trim());
       loadSavedMarks();
     });
 
     exportBtn.addEventListener("click", exportCurrentGroupToCSV);
+
+    useGroupBtn.addEventListener("click", () => {
+      const selectedGroup = groupSelect.value;
+      if (!selectedGroup) {
+        setMessage("Select a saved group first.", true);
+        return;
+      }
+
+      // Set group name field
+      groupNameInput.value = selectedGroup;
+
+      // Rebuild students list from local state for that group
+      setStudentsFromLocalState(selectedGroup);
+
+      currentStudents = parseStudents();
+      renderTable();
+      // Load merged local + cloud for that group
+      loadSavedMarks();
+    });
 
     function parseStudents() {
       return studentsInput.value
@@ -245,6 +280,61 @@
     function setMessage(text, isError = false) {
       statusMsg.textContent = text;
       statusMsg.className = "message " + (isError ? "error" : "success");
+    }
+
+    // ---------- Group list helpers ----------
+
+    function loadGroupList() {
+      try {
+        const raw = localStorage.getItem(LOCAL_GROUPS_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveGroupList(list) {
+      try {
+        localStorage.setItem(LOCAL_GROUPS_KEY, JSON.stringify(list));
+      } catch {
+        // ignore
+      }
+    }
+
+    function registerGroupName(groupName) {
+      if (!groupName) return;
+      const list = loadGroupList();
+      if (!list.includes(groupName)) {
+        list.push(groupName);
+        saveGroupList(list);
+        refreshGroupSelectOptions();
+      }
+    }
+
+    function refreshGroupSelectOptions() {
+      const list = loadGroupList().slice().sort((a, b) => a.localeCompare(b));
+      // Clear existing options except first
+      while (groupSelect.options.length > 1) {
+        groupSelect.remove(1);
+      }
+      list.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        groupSelect.appendChild(opt);
+      });
+    }
+
+    function setStudentsFromLocalState(groupName) {
+      const state = loadGroupState(groupName);
+      const studentsSet = new Set();
+      Object.keys(state).forEach(key => {
+        const [student] = key.split("|");
+        if (student) studentsSet.add(student);
+      });
+      if (studentsSet.size > 0) {
+        studentsInput.value = Array.from(studentsSet).join(", ");
+      }
     }
 
     // ---------- Local state helpers ----------
@@ -278,6 +368,7 @@
       const state = loadGroupState(groupName);
       state[key] = status;
       saveGroupState(groupName, state);
+      registerGroupName(groupName);
     }
 
     function applyLocalStateToUI(groupName) {
@@ -318,7 +409,6 @@
 
     function enqueueOp(op) {
       let queue = loadQueue();
-      // remove any older op for the same cell
       queue = queue.filter(
         q =>
           !(
@@ -330,6 +420,7 @@
       );
       queue.push(op);
       saveQueue(queue);
+      registerGroupName(op.group_name);
     }
 
     async function trySaveToSupabase(op, isRetry = false) {
@@ -472,10 +563,8 @@
       document.querySelectorAll(selectorAll).forEach(node => node.classList.remove("selected"));
       el.classList.add("selected");
 
-      // Local first
       updateLocalState(groupName, student, zone, taskLabel, status);
 
-      // Then Supabase, with offline queue
       const op = {
         group_name: groupName,
         student,
@@ -491,7 +580,8 @@
       const groupName = groupNameInput.value.trim();
       if (!groupName) return;
 
-      // Offline: just show local
+      registerGroupName(groupName);
+
       if (!navigator.onLine) {
         applyLocalStateToUI(groupName);
         setMessage("Offline: showing marks stored on this device.");
@@ -500,10 +590,8 @@
 
       setMessage("Syncing and loading from Supabase...");
 
-      // First try to flush any queued operations to the cloud
       await processQueue();
 
-      // Now read the cloud version
       const { data, error } = await supabaseClient
         .from("evaluations")
         .select("*")
@@ -516,7 +604,6 @@
         return;
       }
 
-      // Merge cloud rows into local state, but never overwrite local entries
       const localState = loadGroupState(groupName);
       const mergedState = { ...localState };
 
@@ -529,7 +616,6 @@
 
       saveGroupState(groupName, mergedState);
 
-      // Clear UI and apply merged state
       document.querySelectorAll(".status-inner").forEach(node => node.classList.remove("selected"));
       applyLocalStateToUI(groupName);
 
@@ -598,6 +684,7 @@
     // Initial layout
     currentStudents = parseStudents();
     renderTable();
+    refreshGroupSelectOptions();
     applyLocalStateToUI(groupNameInput.value.trim());
     processQueue();
   </script>
