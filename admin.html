@@ -92,6 +92,50 @@
       color: #1b5e20;
     }
 
+    .summary-box {
+      margin-top: 10px;
+      padding: 8px;
+      background: #ffffff;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 0.85rem;
+    }
+
+    .summary-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .summary-pass {
+      color: #1b5e20;
+      font-weight: 600;
+    }
+
+    .summary-fail {
+      color: #b00020;
+      font-weight: 600;
+    }
+
+    .summary-zones {
+      margin-top: 4px;
+    }
+
+    .summary-zones p {
+      margin: 2px 0;
+    }
+
+    .status-inc {
+      background-color: #ffe5e5;
+    }
+
+    .status-con {
+      background-color: #fff8d5;
+    }
+
+    .status-refi {
+      background-color: #e2f6dd;
+    }
+
     .no-print {
       /* Hidden in print view */
     }
@@ -119,6 +163,10 @@
         font-size: 0.75rem;
         color: #333;
       }
+
+      .summary-box {
+        border: 1px solid #000;
+      }
     }
   </style>
 </head>
@@ -134,6 +182,7 @@
       <strong>Inconsistent</strong> (Inc),
       <strong>Consistent</strong> (Con),
       <strong>Refined</strong> (Refi).
+      To pass, a participant must have at least <strong>Consistent</strong> in all zones.
     </div>
 
     <div class="controls">
@@ -159,6 +208,8 @@
   </div>
 
   <div id="statusMsg" class="message"></div>
+
+  <div id="summaryBox" class="summary-box" style="display:none;"></div>
 
   <h1 class="print-only" style="display:none;">Snowboard Assessments</h1>
 
@@ -194,6 +245,7 @@
     const statusMsg = document.getElementById("statusMsg");
     const table = document.getElementById("resultsTable");
     const tbody = table.querySelector("tbody");
+    const summaryBox = document.getElementById("summaryBox");
 
     let currentRows = [];
     let allRowsForFilters = [];
@@ -216,6 +268,7 @@
       opt.value = "";
       opt.textContent = "All students";
       studentSelect.appendChild(opt);
+      hideSummary();
       loadData();
     });
     exportCsvBtn.addEventListener("click", exportCSV);
@@ -232,6 +285,13 @@
       if (stat === "Con") return "Consistent";
       if (stat === "Refi") return "Refined";
       return stat || "";
+    }
+
+    function statusClassFor(stat) {
+      if (stat === "Inc") return "status-inc";
+      if (stat === "Con") return "status-con";
+      if (stat === "Refi") return "status-refi";
+      return "";
     }
 
     async function initialLoadForFilters() {
@@ -306,6 +366,7 @@
 
     async function loadData() {
       clearMessage();
+      hideSummary();
       loadBtn.disabled = true;
       exportCsvBtn.disabled = true;
       printBtn.disabled = true;
@@ -347,13 +408,17 @@
         setMessage("No rows found for this filter.");
         exportCsvBtn.disabled = true;
         printBtn.disabled = true;
+        hideSummary();
       } else {
         if (groupVal && studentVal) {
           setMessage("Loaded " + currentRows.length + " rows for " + studentVal + " in " + groupVal + ".");
+          updateSummary(currentRows, groupVal, studentVal);
         } else if (groupVal) {
           setMessage("Loaded " + currentRows.length + " rows for group " + groupVal + ".");
+          hideSummary();
         } else {
           setMessage("Loaded " + currentRows.length + " rows across all groups.");
+          hideSummary();
         }
         exportCsvBtn.disabled = false;
         printBtn.disabled = false;
@@ -368,13 +433,15 @@
       }
 
       rows.forEach(row => {
+        const statusFull = expandStatus(row.status);
+        const statusClass = statusClassFor(row.status);
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${escapeHtml(row.group_name || "")}</td>
           <td>${escapeHtml(row.student || "")}</td>
           <td>${row.zone != null ? row.zone : ""}</td>
           <td>${escapeHtml(row.task || "")}</td>
-          <td>${escapeHtml(expandStatus(row.status))}</td>
+          <td class="${statusClass}">${escapeHtml(statusFull)}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -431,6 +498,77 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    }
+
+    // Participant summary (per student, per group)
+
+    function hideSummary() {
+      summaryBox.style.display = "none";
+      summaryBox.innerHTML = "";
+    }
+
+    function updateSummary(rows, groupVal, studentVal) {
+      if (!groupVal || !studentVal || !rows || rows.length === 0) {
+        hideSummary();
+        return;
+      }
+
+      const zoneStats = {}; // zone -> {inc, con, refi, total}
+      rows.forEach(row => {
+        const z = row.zone;
+        if (z == null) return;
+        if (!zoneStats[z]) {
+          zoneStats[z] = { inc: 0, con: 0, refi: 0, total: 0 };
+        }
+        const stat = row.status;
+        if (stat === "Inc") zoneStats[z].inc += 1;
+        else if (stat === "Con") zoneStats[z].con += 1;
+        else if (stat === "Refi") zoneStats[z].refi += 1;
+        zoneStats[z].total += 1;
+      });
+
+      // Determine pass per zone
+      const zones = Object.keys(zoneStats).map(z => parseInt(z, 10)).sort((a, b) => a - b);
+      let overallPass = true;
+      const lines = [];
+
+      zones.forEach(z => {
+        const zs = zoneStats[z];
+        const hasData = zs.total > 0;
+        const zonePass = hasData && zs.inc === 0 && (zs.con + zs.refi > 0);
+        if (!zonePass) {
+          overallPass = false;
+        }
+        const line = `Zone ${z}: Inc ${zs.inc}, Con ${zs.con}, Refi ${zs.refi} – ` +
+          (zonePass ? "Pass" : "Not yet");
+        lines.push({ z, text: line, pass: zonePass });
+      });
+
+      if (zones.length === 0) {
+        overallPass = false;
+      }
+
+      const overallText = overallPass
+        ? "Overall result: PASS (minimum Consistent reached in all zones with data)."
+        : "Overall result: NOT YET. Participant needs at least Consistent in all zones.";
+
+      let html = "";
+      html += `<div class="summary-title">Participant summary</div>`;
+      html += `<div>Group: <strong>${escapeHtml(groupVal)}</strong></div>`;
+      html += `<div>Student: <strong>${escapeHtml(studentVal)}</strong></div>`;
+      html += `<div style="margin-top:4px;">To pass, the participant must have minimum <strong>Consistent</strong> in all zones.</div>`;
+      html += `<div style="margin-top:4px;" class="${overallPass ? "summary-pass" : "summary-fail"}">${escapeHtml(overallText)}</div>`;
+
+      if (zones.length > 0) {
+        html += `<div class="summary-zones">`;
+        lines.forEach(item => {
+          html += `<p>${escapeHtml(item.text)}</p>`;
+        });
+        html += `</div>`;
+      }
+
+      summaryBox.innerHTML = html;
+      summaryBox.style.display = "block";
     }
 
     initialLoadForFilters();
