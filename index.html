@@ -45,6 +45,12 @@
       background: #0f9d3d;
       color: white;
       cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    button.secondary {
+      background: #5b636a;
+      border-color: #4a5056;
     }
 
     button:disabled {
@@ -141,7 +147,8 @@
 <body>
   <h1>Snowboard Assessment</h1>
   <div class="small">
-    Tap a green square to set Inc, Con or Refi. Data is saved to Supabase automatically.
+    Tap a green square to set Inc, Con or Refi. Data is saved locally first and
+    synced to Supabase automatically when online. You can also export to CSV.
   </div>
 
   <div class="controls">
@@ -157,6 +164,7 @@
 
     <button id="applyLayoutBtn">Apply layout</button>
     <button id="loadBtn">Load saved marks</button>
+    <button id="exportBtn" class="secondary">Export CSV (this group)</button>
   </div>
 
   <div id="statusMsg" class="message"></div>
@@ -166,9 +174,10 @@
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // 🔥 REPLACE THESE WITH YOUR REAL VALUES:
+    // Same values that already work for you
     const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
 
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -198,13 +207,19 @@
     const studentsInput = document.getElementById("studentsInput");
     const tableContainer = document.getElementById("tableContainer");
     const statusMsg = document.getElementById("statusMsg");
+    const exportBtn = document.getElementById("exportBtn");
 
     let currentStudents = [];
+
+    // Local storage keys
+    const LOCAL_STATE_PREFIX = "assessmentGrid_state_";   // per group
+    const LOCAL_QUEUE_KEY = "assessmentGrid_queue_v1";    // offline sync queue
 
     document.getElementById("applyLayoutBtn").addEventListener("click", () => {
       currentStudents = parseStudents();
       renderTable();
       clearMessage();
+      applyLocalStateToUI(groupNameInput.value.trim());
     });
 
     document.getElementById("loadBtn").addEventListener("click", () => {
@@ -212,6 +227,8 @@
       renderTable();
       loadSavedMarks();
     });
+
+    exportBtn.addEventListener("click", exportCurrentGroupToCSV);
 
     function parseStudents() {
       return studentsInput.value
@@ -230,8 +247,151 @@
       statusMsg.className = "message " + (isError ? "error" : "success");
     }
 
+    // ---------- Local state helpers ----------
+
+    function localKey(student, zone, task) {
+      return `${student}|${zone}|${task}`;
+    }
+
+    function loadGroupState(groupName) {
+      if (!groupName) return {};
+      try {
+        const raw = localStorage.getItem(LOCAL_STATE_PREFIX + groupName);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveGroupState(groupName, state) {
+      if (!groupName) return;
+      try {
+        localStorage.setItem(LOCAL_STATE_PREFIX + groupName, JSON.stringify(state));
+      } catch {
+        // ignore
+      }
+    }
+
+    function updateLocalState(groupName, student, zone, task, status) {
+      if (!groupName) return;
+      const key = localKey(student, zone, task);
+      const state = loadGroupState(groupName);
+      state[key] = status;
+      saveGroupState(groupName, state);
+    }
+
+    function applyLocalStateToUI(groupName) {
+      if (!groupName) return;
+      const state = loadGroupState(groupName);
+      Object.entries(state).forEach(([k, status]) => {
+        const [student, zone, task] = k.split("|");
+        const selectorAll =
+          `.status-inner[data-student="${encodeURIComponent(student)}"]` +
+          `[data-zone="${zone}"][data-task="${encodeURIComponent(task)}"]`;
+        const selectorOne = selectorAll + `[data-status="${status}"]`;
+        const cellToSelect = document.querySelector(selectorOne);
+        if (!cellToSelect) return;
+        document.querySelectorAll(selectorAll).forEach(node => node.classList.remove("selected"));
+        cellToSelect.classList.add("selected");
+      });
+    }
+
+    // ---------- Queue helpers ----------
+
+    function loadQueue() {
+      try {
+        const raw = localStorage.getItem(LOCAL_QUEUE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveQueue(queue) {
+      try {
+        localStorage.setItem(LOCAL_QUEUE_KEY, JSON.stringify(queue));
+      } catch {
+        // ignore
+      }
+    }
+
+    function enqueueOp(op) {
+      let queue = loadQueue();
+      // remove any older op for the same cell
+      queue = queue.filter(
+        q =>
+          !(
+            q.group_name === op.group_name &&
+            q.student === op.student &&
+            q.zone === op.zone &&
+            q.task === op.task
+          )
+      );
+      queue.push(op);
+      saveQueue(queue);
+    }
+
+    async function trySaveToSupabase(op, isRetry = false) {
+      if (!navigator.onLine) {
+        enqueueOp(op);
+        if (!isRetry) setMessage("Saved locally. No network, will sync when online.");
+        return false;
+      }
+
+      try {
+        const { error: delError } = await supabaseClient
+          .from("evaluations")
+          .delete()
+          .eq("group_name", op.group_name)
+          .eq("student", op.student)
+          .eq("zone", op.zone)
+          .eq("task", op.task);
+
+        if (delError) throw delError;
+
+        const { error: insError } = await supabaseClient.from("evaluations").insert(op);
+        if (insError) throw insError;
+
+        if (!isRetry) setMessage("Saved.");
+        return true;
+      } catch (e) {
+        console.error("Supabase save failed", e);
+        enqueueOp(op);
+        if (!isRetry) {
+          const msg = e && e.message ? e.message : String(e);
+          setMessage("Saved locally, cloud error: " + msg, true);
+        }
+        return false;
+      }
+    }
+
+    async function processQueue() {
+      if (!navigator.onLine) return;
+      let queue = loadQueue();
+      if (queue.length === 0) return;
+
+      const remaining = [];
+      setMessage("Syncing offline changes...");
+      for (const op of queue) {
+        const ok = await trySaveToSupabase(op, true);
+        if (!ok) remaining.push(op);
+      }
+      saveQueue(remaining);
+      if (remaining.length === 0) {
+        setMessage("Offline changes synced.");
+      } else {
+        setMessage("Some changes still saved locally. Will retry.", true);
+      }
+    }
+
+    window.addEventListener("online", processQueue);
+
+    // ---------- Table rendering ----------
+
     function renderTable() {
-      if (!groupNameInput.value.trim()) {
+      const groupName = groupNameInput.value.trim();
+
+      if (!groupName) {
         setMessage("Enter a group name first.", true);
         return;
       }
@@ -261,7 +421,9 @@
 
       TASKS.forEach(task => {
         if (task.zone !== lastZone) {
-          html += `<tr><th class="zone-header" colspan="${1 + currentStudents.length * STATUSES.length}">Zone ${task.zone}</th></tr>`;
+          html += `<tr><th class="zone-header" colspan="${1 + currentStudents.length * STATUSES.length}">
+                     Zone ${task.zone}
+                   </th></tr>`;
           lastZone = task.zone;
         }
 
@@ -269,11 +431,9 @@
 
         currentStudents.forEach(student => {
           STATUSES.forEach(status => {
-            const id = cellKey(student, task.zone, task.label, status);
             html += `
               <td class="status-cell">
                 <div class="status-inner"
-                     id="${id}"
                      data-student="${encodeURIComponent(student)}"
                      data-zone="${task.zone}"
                      data-task="${encodeURIComponent(task.label)}"
@@ -294,10 +454,6 @@
       });
     }
 
-    function cellKey(student, zone, taskLabel, status) {
-      return `cell_${encodeURIComponent(student)}_${zone}_${encodeURIComponent(taskLabel)}_${status}`;
-    }
-
     async function onStatusClick(event) {
       const el = event.currentTarget;
       const student = decodeURIComponent(el.dataset.student);
@@ -308,44 +464,48 @@
 
       if (!groupName) return;
 
-      document.querySelectorAll(
-        `.status-inner[data-student="${encodeURIComponent(student)}"][data-zone="${zone}"][data-task="${encodeURIComponent(taskLabel)}"]`
-      ).forEach(node => {
-        node.classList.remove("selected");
-      });
+      const selectorAll =
+        `.status-inner[data-student="${encodeURIComponent(student)}"]` +
+        `[data-zone="${zone}"][data-task="${encodeURIComponent(taskLabel)}"]`;
+
+      document.querySelectorAll(selectorAll).forEach(node => node.classList.remove("selected"));
       el.classList.add("selected");
 
-      await supabaseClient.from("evaluations")
-        .delete()
-        .eq("group_name", groupName)
-        .eq("student", student)
-        .eq("zone", zone)
-        .eq("task", taskLabel);
+      // Local first
+      updateLocalState(groupName, student, zone, taskLabel, status);
 
-      const { error } = await supabaseClient.from("evaluations").insert({
+      // Then Supabase, with offline queue
+      const op = {
         group_name: groupName,
         student,
         zone,
         task: taskLabel,
         status
-      });
+      };
 
-      if (error) setMessage("Could not save mark.", true);
-      else setMessage("Saved.");
+      await trySaveToSupabase(op);
     }
 
     async function loadSavedMarks() {
       const groupName = groupNameInput.value.trim();
       if (!groupName) return;
 
-      setMessage("Loading...");
+      if (!navigator.onLine) {
+        applyLocalStateToUI(groupName);
+        setMessage("Offline: showing marks stored on this device.");
+        return;
+      }
+
+      setMessage("Loading from Supabase...");
       const { data, error } = await supabaseClient
         .from("evaluations")
         .select("*")
         .eq("group_name", groupName);
 
       if (error) {
-        setMessage("Failed to load.", true);
+        console.error(error);
+        setMessage("Failed to load from cloud. Using local marks only.", true);
+        applyLocalStateToUI(groupName);
         return;
       }
 
@@ -354,16 +514,93 @@
       });
 
       data.forEach(row => {
-        const sel = `.status-inner[data-student="${encodeURIComponent(row.student)}"][data-zone="${row.zone}"][data-task="${encodeURIComponent(row.task)}"][data-status="${row.status}"]`;
-        const cell = document.querySelector(sel);
-        if (cell) cell.classList.add("selected");
+        const selectorAll =
+          `.status-inner[data-student="${encodeURIComponent(row.student)}"]` +
+          `[data-zone="${row.zone}"][data-task="${encodeURIComponent(row.task)}"]`;
+        const selectorOne = selectorAll + `[data-status="${row.status}"]`;
+        const cell = document.querySelector(selectorOne);
+        if (cell) {
+          document.querySelectorAll(selectorAll).forEach(node => node.classList.remove("selected"));
+          cell.classList.add("selected");
+        }
       });
 
-      setMessage("Loaded.");
+      // Also sync this cloud view into localStorage
+      const state = {};
+      data.forEach(row => {
+        const key = localKey(row.student, row.zone, row.task);
+        state[key] = row.status;
+      });
+      saveGroupState(groupName, state);
+
+      setMessage("Loaded from Supabase.");
+      processQueue();
     }
 
+    // ---------- CSV export from localStorage ----------
+
+    function exportCurrentGroupToCSV() {
+      const groupName = groupNameInput.value.trim();
+      if (!groupName) {
+        setMessage("Enter a group name before exporting.", true);
+        return;
+      }
+
+      const state = loadGroupState(groupName);
+      const entries = Object.entries(state);
+      if (entries.length === 0) {
+        setMessage("No local marks found for this group to export.", true);
+        return;
+      }
+
+      const headers = ["group_name", "student", "zone", "task", "status"];
+      const lines = [];
+      lines.push(headers.join(","));
+
+      entries.forEach(([key, status]) => {
+        const [student, zone, task] = key.split("|");
+
+        const rowObj = {
+          group_name: groupName,
+          student,
+          zone: zone,
+          task: task,
+          status: status
+        };
+
+        const values = headers.map(h => {
+          let val = rowObj[h];
+          if (val == null) val = "";
+          val = String(val).replace(/"/g, '""');
+          if (val.search(/[",\n]/) !== -1) {
+            val = '"' + val + '"';
+          }
+          return val;
+        });
+
+        lines.push(values.join(","));
+      });
+
+      const csvContent = lines.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `snowboard_assessment_${groupName.replace(/\s+/g, "_")}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setMessage("CSV exported from local data.");
+    }
+
+    // Initial layout
     currentStudents = parseStudents();
     renderTable();
+    applyLocalStateToUI(groupNameInput.value.trim());
+    processQueue();
   </script>
 </body>
 </html>
