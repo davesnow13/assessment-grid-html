@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Snowboard Assessment Grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 16px;
+      background: #f4f6f8;
+    }
+
+    h1 {
+      margin-bottom: 4px;
+    }
+
+    .small {
+      font-size: 0.85rem;
+      color: #555;
+    }
+
+    .controls {
+      margin: 12px 0 20px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 0.9rem;
+    }
+
+    input[type="text"] {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid #0b6b2f;
+      background: #0f9d3d;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: white;
+    }
+
+    th, td {
+      border: 2px solid #000;
+      padding: 6px 4px;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+
+    th.task-col, td.task-col {
+      text-align: left;
+      min-width: 210px;
+      background: #f9fbfd;
+    }
+
+    th.zone-header {
+      background: #e6eef7;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    th.student-group-header {
+      background: #d9dde0;
+    }
+
+    th.status-header {
+      background: #f3f3f3;
+      font-size: 0.75rem;
+    }
+
+    .status-cell {
+      background: linear-gradient(180deg, #a6f28c, #56c43b);
+    }
+
+    .status-inner {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 1px solid #999;
+      background: #e9ecef;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .status-inner.selected {
+      background: #2e7d32;
+      border-color: #1b5e20;
+    }
+
+    .status-inner.selected::after {
+      content: "✓";
+      color: white;
+      font-size: 0.8rem;
+    }
+
+    .message {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #444;
+    }
+
+    .error {
+      color: #b00020;
+    }
+
+    .success {
+      color: #1b5e20;
+    }
+
+    @media (max-width: 900px) {
+      table {
+        font-size: 0.75rem;
+      }
+      th, td {
+        padding: 4px 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Snowboard Assessment</h1>
+  <div class="small">
+    Tap a green square to set Inc, Con or Refi. Data is saved to Supabase automatically.
+  </div>
+
+  <div class="controls">
+    <label>
+      Group name:
+      <input id="groupNameInput" type="text" placeholder="e.g. Lake Louise Group A" />
+    </label>
+
+    <label>
+      Students:
+      <input id="studentsInput" type="text" value="Reuben, Albert, Benedict" />
+    </label>
+
+    <button id="applyLayoutBtn">Apply layout</button>
+    <button id="loadBtn">Load saved marks</button>
+  </div>
+
+  <div id="statusMsg" class="message"></div>
+
+  <div id="tableContainer"></div>
+
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // 🔥 REPLACE THESE WITH YOUR REAL VALUES:
+    const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
+
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const STATUSES = ["Inc", "Con", "Refi"];
+
+    const TASKS = [
+      { zone: 1, label: "Load and unload a chairlift and Riding the magic carpet" },
+      { zone: 1, label: "Skating in a straight line" },
+      { zone: 1, label: "Skate around cones" },
+      { zone: 1, label: "Skate across a slope on both edges" },
+      { zone: 1, label: "Switch skating in straight line" },
+      { zone: 1, label: "J-turns" },
+
+      { zone: 2, label: "Stand up on both edges" },
+      { zone: 2, label: "Sideslip both edges" },
+      { zone: 2, label: "Traversing on both edges" },
+      { zone: 2, label: "Turning edge to edge down fall line (Linked turns)" },
+
+      { zone: 3, label: "Linked Turns (Continuous)" },
+      { zone: 3, label: "Speed Control Through Turn Shape" },
+      { zone: 3, label: "Edge Release and Engagement" },
+      { zone: 3, label: "Flow and Continuity" },
+      { zone: 3, label: "Adaptability" }
+    ];
+
+    const groupNameInput = document.getElementById("groupNameInput");
+    const studentsInput = document.getElementById("studentsInput");
+    const tableContainer = document.getElementById("tableContainer");
+    const statusMsg = document.getElementById("statusMsg");
+
+    let currentStudents = [];
+
+    document.getElementById("applyLayoutBtn").addEventListener("click", () => {
+      currentStudents = parseStudents();
+      renderTable();
+      clearMessage();
+    });
+
+    document.getElementById("loadBtn").addEventListener("click", () => {
+      currentStudents = parseStudents();
+      renderTable();
+      loadSavedMarks();
+    });
+
+    function parseStudents() {
+      return studentsInput.value
+        .split(",")
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+    }
+
+    function clearMessage() {
+      statusMsg.textContent = "";
+      statusMsg.className = "message";
+    }
+
+    function setMessage(text, isError = false) {
+      statusMsg.textContent = text;
+      statusMsg.className = "message " + (isError ? "error" : "success");
+    }
+
+    function renderTable() {
+      if (!groupNameInput.value.trim()) {
+        setMessage("Enter a group name first.", true);
+        return;
+      }
+
+      if (currentStudents.length === 0) {
+        setMessage("Enter at least one student.", true);
+        return;
+      }
+
+      let html = "<table>";
+
+      html += "<tr><th class='task-col'>Task</th>";
+      currentStudents.forEach(student => {
+        html += `<th class="student-group-header" colspan="${STATUSES.length}">${student}</th>`;
+      });
+      html += "</tr>";
+
+      html += "<tr><th></th>";
+      currentStudents.forEach(() => {
+        STATUSES.forEach(status => {
+          html += `<th class="status-header">${status}</th>`;
+        });
+      });
+      html += "</tr>";
+
+      let lastZone = null;
+
+      TASKS.forEach(task => {
+        if (task.zone !== lastZone) {
+          html += `<tr><th class="zone-header" colspan="${1 + currentStudents.length * STATUSES.length}">Zone ${task.zone}</th></tr>`;
+          lastZone = task.zone;
+        }
+
+        html += `<tr><td class="task-col">${task.label}</td>`;
+
+        currentStudents.forEach(student => {
+          STATUSES.forEach(status => {
+            const id = cellKey(student, task.zone, task.label, status);
+            html += `
+              <td class="status-cell">
+                <div class="status-inner"
+                     id="${id}"
+                     data-student="${encodeURIComponent(student)}"
+                     data-zone="${task.zone}"
+                     data-task="${encodeURIComponent(task.label)}"
+                     data-status="${status}">
+                </div>
+              </td>`;
+          });
+        });
+
+        html += "</tr>";
+      });
+
+      html += "</table>";
+      tableContainer.innerHTML = html;
+
+      document.querySelectorAll(".status-inner").forEach(el => {
+        el.addEventListener("click", onStatusClick);
+      });
+    }
+
+    function cellKey(student, zone, taskLabel, status) {
+      return `cell_${encodeURIComponent(student)}_${zone}_${encodeURIComponent(taskLabel)}_${status}`;
+    }
+
+    async function onStatusClick(event) {
+      const el = event.currentTarget;
+      const student = decodeURIComponent(el.dataset.student);
+      const zone = parseInt(el.dataset.zone);
+      const taskLabel = decodeURIComponent(el.dataset.task);
+      const status = el.dataset.status;
+      const groupName = groupNameInput.value.trim();
+
+      if (!groupName) return;
+
+      document.querySelectorAll(
+        `.status-inner[data-student="${encodeURIComponent(student)}"][data-zone="${zone}"][data-task="${encodeURIComponent(taskLabel)}"]`
+      ).forEach(node => {
+        node.classList.remove("selected");
+      });
+      el.classList.add("selected");
+
+      await supabaseClient.from("evaluations")
+        .delete()
+        .eq("group_name", groupName)
+        .eq("student", student)
+        .eq("zone", zone)
+        .eq("task", taskLabel);
+
+      const { error } = await supabaseClient.from("evaluations").insert({
+        group_name: groupName,
+        student,
+        zone,
+        task: taskLabel,
+        status
+      });
+
+      if (error) setMessage("Could not save mark.", true);
+      else setMessage("Saved.");
+    }
+
+    async function loadSavedMarks() {
+      const groupName = groupNameInput.value.trim();
+      if (!groupName) return;
+
+      setMessage("Loading...");
+      const { data, error } = await supabaseClient
+        .from("evaluations")
+        .select("*")
+        .eq("group_name", groupName);
+
+      if (error) {
+        setMessage("Failed to load.", true);
+        return;
+      }
+
+      document.querySelectorAll(".status-inner").forEach(node => {
+        node.classList.remove("selected");
+      });
+
+      data.forEach(row => {
+        const sel = `.status-inner[data-student="${encodeURIComponent(row.student)}"][data-zone="${row.zone}"][data-task="${encodeURIComponent(row.task)}"][data-status="${row.status}"]`;
+        const cell = document.querySelector(sel);
+        if (cell) cell.classList.add("selected");
+      });
+
+      setMessage("Loaded.");
+    }
+
+    currentStudents = parseStudents();
+    renderTable();
+  </script>
+</body>
+</html>
