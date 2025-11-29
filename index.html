@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Snowboard Assessment Grid</title>
+  <title>Snowboard Assessment</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
@@ -141,7 +141,7 @@
 <body>
   <h1>Snowboard Assessment</h1>
   <div class="small">
-    Tap a green square to set Inc, Con or Refi. Data is saved to Supabase automatically.
+    Tap a green square to set Inc, Con or Refi. Data is saved to Supabase automatically, with offline storage if the network is down.
   </div>
 
   <div class="controls">
@@ -163,10 +163,10 @@
 
   <div id="tableContainer"></div>
 
-    <!-- Supabase client -->
+  <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // USE YOUR REAL VALUES HERE
+    // Your real Supabase values
     const SUPABASE_URL = "https://ynlzmerlrbgflcabvvfs.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbgciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inluem1lcmxyYmdmbGNhYnZ2ZnMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczMjk4MDQxMSwiZXhwIjoyMDQ4NTU2NDExfQ.6yLCGmMmKsShchJxsTLSLbIHwdKra0bxu4dRgs86jkE";
 
@@ -241,7 +241,7 @@
       try {
         localStorage.setItem(LOCAL_STATE_PREFIX + groupName, JSON.stringify(state));
       } catch {
-        // ignore if storage is full or unavailable
+        // ignore
       }
     }
 
@@ -421,7 +421,6 @@
         el.addEventListener("click", onStatusClick);
       });
 
-      // After rendering, apply any local state for this group
       applyLocalStateToUI(groupName);
     }
 
@@ -442,10 +441,8 @@
       document.querySelectorAll(selectorAll).forEach((node) => node.classList.remove("selected"));
       el.classList.add("selected");
 
-      // update local state
       updateLocalState(groupName, student, zone, taskLabel, status);
 
-      // build operation and attempt cloud save / queue
       const op = {
         group_name: groupName,
         student,
@@ -462,7 +459,6 @@
       if (!groupName) return;
 
       if (!navigator.onLine) {
-        // offline: just use local state
         applyLocalStateToUI(groupName);
         setMessage("Offline: showing marks stored on this device.");
         return;
@@ -496,15 +492,11 @@
         }
       });
 
-      // overlay any local unsynced marks on top
       applyLocalStateToUI(groupName);
 
       setMessage("Loaded.");
-      // after loading, also try to sync any queued offline changes
       processQueue();
     }
-
-    // ---------- Initial wiring ----------
 
     document.getElementById("applyLayoutBtn").addEventListener("click", () => {
       currentStudents = parseStudents();
@@ -518,7 +510,6 @@
       loadSavedMarks();
     });
 
-    // Initial render with default students
     currentStudents = parseStudents();
     renderTable();
     processQueue();
