@@ -327,6 +327,13 @@
         return;
       }
 
+function expandStatus(stat) {
+  if (stat === "Inc") return "Inconsistent";
+  if (stat === "Con") return "Consistent";
+  if (stat === "Refi") return "Refined";
+  return stat;
+}
+      
       currentRows = data || [];
       renderTable(currentRows);
 
@@ -361,7 +368,7 @@
           <td>${escapeHtml(row.student || "")}</td>
           <td>${row.zone != null ? row.zone : ""}</td>
           <td>${escapeHtml(row.task || "")}</td>
-          <td>${escapeHtml(row.status || "")}</td>
+          <td>${escapeHtml(expandStatus(row.status))}</td>
         `;
         tbody.appendChild(tr);
       });
