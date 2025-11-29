@@ -174,7 +174,7 @@
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Same values that already work for you
+    // Supabase configuration that works for you now
     const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
     const SUPABASE_ANON_KEY =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
@@ -283,6 +283,7 @@
     function applyLocalStateToUI(groupName) {
       if (!groupName) return;
       const state = loadGroupState(groupName);
+
       Object.entries(state).forEach(([k, status]) => {
         const [student, zone, task] = k.split("|");
         const selectorAll =
@@ -490,13 +491,19 @@
       const groupName = groupNameInput.value.trim();
       if (!groupName) return;
 
+      // Offline: just show local
       if (!navigator.onLine) {
         applyLocalStateToUI(groupName);
         setMessage("Offline: showing marks stored on this device.");
         return;
       }
 
-      setMessage("Loading from Supabase...");
+      setMessage("Syncing and loading from Supabase...");
+
+      // First try to flush any queued operations to the cloud
+      await processQueue();
+
+      // Now read the cloud version
       const { data, error } = await supabaseClient
         .from("evaluations")
         .select("*")
@@ -504,37 +511,29 @@
 
       if (error) {
         console.error(error);
-        setMessage("Failed to load from cloud. Using local marks only.", true);
+        setMessage("Failed to load from cloud. Keeping local marks.", true);
         applyLocalStateToUI(groupName);
         return;
       }
 
-      document.querySelectorAll(".status-inner").forEach(node => {
-        node.classList.remove("selected");
-      });
+      // Merge cloud rows into local state, but never overwrite local entries
+      const localState = loadGroupState(groupName);
+      const mergedState = { ...localState };
 
       data.forEach(row => {
-        const selectorAll =
-          `.status-inner[data-student="${encodeURIComponent(row.student)}"]` +
-          `[data-zone="${row.zone}"][data-task="${encodeURIComponent(row.task)}"]`;
-        const selectorOne = selectorAll + `[data-status="${row.status}"]`;
-        const cell = document.querySelector(selectorOne);
-        if (cell) {
-          document.querySelectorAll(selectorAll).forEach(node => node.classList.remove("selected"));
-          cell.classList.add("selected");
+        const key = localKey(row.student, row.zone, row.task);
+        if (mergedState[key] == null) {
+          mergedState[key] = row.status;
         }
       });
 
-      // Also sync this cloud view into localStorage
-      const state = {};
-      data.forEach(row => {
-        const key = localKey(row.student, row.zone, row.task);
-        state[key] = row.status;
-      });
-      saveGroupState(groupName, state);
+      saveGroupState(groupName, mergedState);
 
-      setMessage("Loaded from Supabase.");
-      processQueue();
+      // Clear UI and apply merged state
+      document.querySelectorAll(".status-inner").forEach(node => node.classList.remove("selected"));
+      applyLocalStateToUI(groupName);
+
+      setMessage("Loaded. Local marks kept where present.");
     }
 
     // ---------- CSV export from localStorage ----------
