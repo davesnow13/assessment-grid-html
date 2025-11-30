@@ -104,9 +104,29 @@
     }
 
     #participantSummary {
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       color: #444;
       margin: 8px 0 8px 0;
+    }
+
+    #participantSummary .summary-box {
+      border: 2px solid #999;
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #ffffff;
+    }
+
+    #participantSummary h2 {
+      font-size: 1rem;
+      margin: 0 0 4px 0;
+    }
+
+    #participantSummary p {
+      margin: 2px 0;
+    }
+
+    #participantSummary .zone-line {
+      margin-top: 2px;
     }
 
     #participantSummary .passed {
@@ -174,8 +194,7 @@
   <div class="small">
     View results per group, see course status, and close or reopen courses.  
     Status names: Inc = Inconsistent, Con = Consistent, Refi = Refined.  
-    A participant passes the assessment if they have at least Consistent in all zones
-    (no Inconsistent marks in any zone).
+    A participant passes the assessment if they have a minimum of Consistent in all zones (no Inconsistent marks in any zone).
   </div>
 
   <!-- Group selection -->
@@ -239,9 +258,10 @@
 
     let currentGroup = null;
     let currentIsClosed = false;
-    let currentRows = [];          // all evaluations for current group
-    let currentParticipants = [];  // list of participants in current group
-    const ZONES = [1, 2, 3];       // used for pass/fail logic
+    let currentRows = [];
+    let statsByStudent = {};
+    let passMap = {};
+    const ZONES = [1, 2, 3];
 
     function setMessage(text, isError) {
       statusMsg.textContent = text;
@@ -267,88 +287,117 @@
       return "";
     }
 
-    // Compute pass/fail: participant passes if every task in every zone has Con or Refi
-    function computePassMap(rows) {
-      const perStudent = {};
+    // Compute stats per student and zone, and overall pass map
+    function computeStatsAndPassMap(rows) {
+      const stats = {};
+      const passes = {};
 
-      rows.forEach(function(row) {
+      rows.forEach(function (row) {
         const student = row.student;
         const zone = row.zone;
-        const status = row.status;
 
-        if (!perStudent[student]) {
-          perStudent[student] = {
-            zones: {}
-          };
+        if (!stats[student]) {
+          stats[student] = { zones: {} };
         }
-        if (!perStudent[student].zones[zone]) {
-          perStudent[student].zones[zone] = {
-            anyMarked: false,
-            allConsistent: true
-          };
+        if (!stats[student].zones[zone]) {
+          stats[student].zones[zone] = { inc: 0, con: 0, refi: 0, total: 0 };
         }
 
-        const z = perStudent[student].zones[zone];
-        z.anyMarked = true;
-
-        // Anything not Con or Refi is considered "not consistent enough"
-        if (status !== "Con" && status !== "Refi") {
-          z.allConsistent = false;
-        }
+        const z = stats[student].zones[zone];
+        z.total += 1;
+        if (row.status === "Inc") z.inc += 1;
+        else if (row.status === "Con") z.con += 1;
+        else if (row.status === "Refi") z.refi += 1;
       });
 
-      const passMap = {};
-      Object.keys(perStudent).forEach(function(student) {
-        const zoneInfo = perStudent[student].zones;
-        let passes = true;
-
-        ZONES.forEach(function(zone) {
-          const info = zoneInfo[zone];
-          // If zone has no marks or contains any Inc or missing consistent, participant does not pass
-          if (!info || !info.anyMarked || !info.allConsistent) {
-            passes = false;
+      Object.keys(stats).forEach(function (student) {
+        let ok = true;
+        ZONES.forEach(function (zone) {
+          const z = stats[student].zones[zone];
+          // Zone is valid only if it has at least one mark and no Inc
+          if (!z || z.total === 0 || z.inc > 0) {
+            ok = false;
           }
         });
-
-        passMap[student] = passes;
+        passes[student] = ok;
       });
 
-      return passMap;
+      return { stats, passes };
     }
 
-    // Build summary text for all participants in current group
+    // Detailed participant summary when single student selected,
+    // or group list when "All participants" is selected
     function renderParticipantSummary() {
       if (!currentRows || currentRows.length === 0) {
-        participantSummary.textContent = "";
+        participantSummary.innerHTML = "";
         return;
       }
 
-      const passMap = computePassMap(currentRows);
-      const names = Array.from(new Set(currentRows.map(function(r) { return r.student; }))).sort();
+      const selectedStudent = participantSelect.value;
 
-      if (names.length === 0) {
-        participantSummary.textContent = "";
+      if (!selectedStudent) {
+        // All participants: show compact pass list
+        const names = Array.from(new Set(currentRows.map(r => r.student))).sort();
+        if (names.length === 0) {
+          participantSummary.innerHTML = "";
+          return;
+        }
+
+        let html = "<div class='summary-box'>";
+        html += "<h2>Participant summary</h2>";
+        html += "<p><strong>Group:</strong> " + (currentGroup || "") + "</p>";
+        html += "<p>To pass, participants must have minimum <strong>Consistent</strong> in all zones (no Inconsistent marks).</p>";
+        html += "<ul>";
+        names.forEach(function (name) {
+          const passed = !!passMap[name];
+          html += "<li>" +
+            name +
+            ": <span class='" +
+            (passed ? "passed" : "not-passed") +
+            "'>" +
+            (passed ? "Passed" : "Not yet passed") +
+            "</span></li>";
+        });
+        html += "</ul></div>";
+
+        participantSummary.innerHTML = html;
         return;
       }
 
-      let html = "<strong>Participant results (group pass check = minimum Consistent in all zones):</strong><br />";
-      html += "<ul>";
-      names.forEach(function(name) {
-        const passed = !!passMap[name];
-        html += "<li>" +
-          name +
-          ": <span class=\"" +
-          (passed ? "passed" : "not-passed") +
-          "\">" +
-          (passed ? "Passed" : "Not yet passed") +
-          "</span></li>";
+      // Single participant summary with per-zone breakdown
+      const sStats = statsByStudent[selectedStudent];
+      if (!sStats) {
+        participantSummary.innerHTML = "";
+        return;
+      }
+      const overallPass = !!passMap[selectedStudent];
+
+      let html = "<div class='summary-box'>";
+      html += "<h2>Participant summary</h2>";
+      html += "<p><strong>Group:</strong> " + (currentGroup || "") + "</p>";
+      html += "<p><strong>Student:</strong> <strong>" + selectedStudent + "</strong></p>";
+      html += "<p>To pass, the participant must have minimum <strong>Consistent</strong> in all zones.</p>";
+
+      if (overallPass) {
+        html += "<p class='passed'>Overall result: PASSED. Participant has at least Consistent in all zones.</p>";
+      } else {
+        html += "<p class='not-passed'>Overall result: NOT YET. Participant needs at least Consistent in all zones.</p>";
+      }
+
+      ZONES.forEach(function (zone) {
+        const z = sStats.zones[zone] || { inc: 0, con: 0, refi: 0, total: 0 };
+        const zonePass = z.total > 0 && z.inc === 0;
+        html += "<p class='zone-line'>Zone " + zone + ": Inc " + z.inc +
+          ", Con " + z.con + ", Refi " + z.refi +
+          " – " + (zonePass ? "<span class='passed'>Passed</span>" : "<span class='not-passed'>Not yet</span>") +
+          "</p>";
       });
-      html += "</ul>";
 
+      html += "</div>";
       participantSummary.innerHTML = html;
     }
 
-    // Load list of groups from evaluations + courses
+    // Load list of groups using evaluations + courses
     async function loadGroupList() {
       clearMessage();
 
@@ -359,45 +408,35 @@
             supabase.from("courses").select("group_name, is_closed")
           ]);
 
-        if (evalError) {
-          console.error(evalError);
-        }
-        if (courseError) {
-          console.error(courseError);
-        }
+        if (evalError) console.error(evalError);
+        if (courseError) console.error(courseError);
 
         const groupsSet = new Set();
         if (evalData) {
-          evalData.forEach(function(row) {
-            if (row.group_name) {
-              groupsSet.add(row.group_name);
-            }
+          evalData.forEach(row => {
+            if (row.group_name) groupsSet.add(row.group_name);
           });
         }
         if (courseData) {
-          courseData.forEach(function(row) {
-            if (row.group_name) {
-              groupsSet.add(row.group_name);
-            }
+          courseData.forEach(row => {
+            if (row.group_name) groupsSet.add(row.group_name);
           });
         }
 
         const closedMap = new Map();
         if (courseData) {
-          courseData.forEach(function(row) {
+          courseData.forEach(row => {
             closedMap.set(row.group_name, !!row.is_closed);
           });
         }
 
-        const groups = Array.from(groupsSet).sort(function(a, b) {
-          return a.localeCompare(b);
-        });
+        const groups = Array.from(groupsSet).sort((a, b) => a.localeCompare(b));
 
         while (groupSelect.options.length > 1) {
           groupSelect.remove(1);
         }
 
-        groups.forEach(function(name) {
+        groups.forEach(name => {
           const opt = document.createElement("option");
           const isClosed = closedMap.get(name);
           opt.value = name;
@@ -475,7 +514,7 @@
 
       currentIsClosed = newClosed;
       await loadCourseStatus(currentGroup);
-      await loadGroupList(); // refresh labels in dropdown
+      await loadGroupList();
 
       setMessage(newClosed ? "Course closed." : "Course reopened.");
     }
@@ -492,13 +531,9 @@
         return;
       }
 
-      const names = Array.from(new Set(currentRows.map(function(r) {
-        return r.student;
-      }))).sort();
+      const names = Array.from(new Set(currentRows.map(r => r.student))).sort();
 
-      currentParticipants = names;
-
-      names.forEach(function(name) {
+      names.forEach(name => {
         const opt = document.createElement("option");
         opt.value = name;
         opt.textContent = name;
@@ -511,16 +546,10 @@
     }
 
     function getFilteredRows() {
-      if (!currentRows || currentRows.length === 0) {
-        return [];
-      }
-      const selectedStudent = participantSelect.value;
-      if (!selectedStudent) {
-        return currentRows;
-      }
-      return currentRows.filter(function(row) {
-        return row.student === selectedStudent;
-      });
+      if (!currentRows || currentRows.length === 0) return [];
+      const selected = participantSelect.value;
+      if (!selected) return currentRows;
+      return currentRows.filter(row => row.student === selected);
     }
 
     function renderTable() {
@@ -534,7 +563,7 @@
       let html = "<table>";
       html += "<tr><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th>Status</th></tr>";
 
-      rows.forEach(function(row) {
+      rows.forEach(row => {
         const longStatus = mapStatusLong(row.status);
         const cls = statusClass(row.status);
         html += "<tr>" +
@@ -550,21 +579,21 @@
     }
 
     async function loadGroupData() {
-      const selected = groupSelect.value;
-      if (!selected) {
+      const val = groupSelect.value;
+      if (!val) {
         setMessage("Select a group first.", true);
         return;
       }
+
       clearMessage();
-      participantSummary.textContent = "";
+      participantSummary.innerHTML = "";
       tableContainer.innerHTML = "";
       toggleCourseBtn.disabled = true;
       participantSelect.disabled = true;
       exportBtn.disabled = true;
       printBtn.disabled = true;
 
-      // Value in select is the raw group name (without "(closed)" suffix)
-      const groupName = selected;
+      const groupName = val;
       currentGroup = groupName;
 
       setMessage("Loading group data...");
@@ -587,13 +616,19 @@
 
       if (!data || data.length === 0) {
         currentRows = [];
+        statsByStudent = {};
+        passMap = {};
         tableContainer.innerHTML = "<p>No evaluations found for this group.</p>";
-        participantSummary.textContent = "";
+        participantSummary.innerHTML = "";
         setMessage("Loaded, but no data for this group.");
         return;
       }
 
       currentRows = data;
+      const statsResult = computeStatsAndPassMap(currentRows);
+      statsByStudent = statsResult.stats;
+      passMap = statsResult.passes;
+
       rebuildParticipantSelect();
       renderParticipantSummary();
       renderTable();
@@ -607,34 +642,28 @@
         return;
       }
 
-      const passMap = computePassMap(currentRows);
-
-      const headers = ["group_name", "student", "zone", "task", "status", "passed_all_zones"];
+      const headers = ["group_name", "student", "zone", "task", "status"];
       const lines = [];
       lines.push(headers.join(","));
 
-      rows.forEach(function(row) {
-        const passed = passMap[row.student] ? "yes" : "no";
-        const rowObj = {
+      rows.forEach(row => {
+        const obj = {
           group_name: row.group_name,
           student: row.student,
           zone: row.zone,
           task: row.task,
-          status: row.status,
-          passed_all_zones: passed
+          status: row.status
         };
 
-        const values = headers.map(function(h) {
-          let val = rowObj[h];
-          if (val == null) val = "";
-          val = String(val).replace(/"/g, '""');
-          if (val.search(/[",\n]/) !== -1) {
-            val = '"' + val + '"';
-          }
-          return val;
+        const vals = headers.map(h => {
+          let v = obj[h];
+          if (v == null) v = "";
+          v = String(v).replace(/"/g, '""');
+          if (v.search(/[",\n]/) !== -1) v = '"' + v + '"';
+          return v;
         });
 
-        lines.push(values.join(","));
+        lines.push(vals.join(","));
       });
 
       const csvContent = lines.join("\n");
@@ -660,10 +689,8 @@
         return;
       }
 
-      const passMap = computePassMap(currentRows);
       const selectedStudent = participantSelect.value;
       const titleGroup = currentGroup || "Group";
-
       let titleText = "Snowboard Assessment – " + titleGroup;
       if (selectedStudent) {
         titleText += " – " + selectedStudent;
@@ -684,16 +711,44 @@
       html += ".zone-cell { text-align: center; width: 60px; }";
       html += ".passed { color: #1b5e20; font-weight: 600; }";
       html += ".not-passed { color: #c62828; font-weight: 600; }";
+      html += ".summary-box { border: 2px solid #999; border-radius: 10px; padding: 10px 12px; background: #ffffff; margin-bottom: 12px; }";
       html += "</style></head><body>";
 
       html += "<h1>" + titleText + "</h1>";
-      html += "<p>A participant passes the assessment if they have a minimum of Consistent (Con) in all zones (no Inconsistent marks in any zone).</p>";
 
-      if (!selectedStudent) {
-        // Summary for all participants
-        const names = Array.from(new Set(currentRows.map(function(r) { return r.student; }))).sort();
-        html += "<p><strong>Group pass summary:</strong></p><ul>";
-        names.forEach(function(name) {
+      if (selectedStudent) {
+        // Single participant print summary
+        const sStats = statsByStudent[selectedStudent];
+        const overallPass = !!passMap[selectedStudent];
+
+        html += "<div class='summary-box'>";
+        html += "<p><strong>Group:</strong> " + (currentGroup || "") + "</p>";
+        html += "<p><strong>Student:</strong> <strong>" + selectedStudent + "</strong></p>";
+        html += "<p>To pass, the participant must have minimum <strong>Consistent</strong> in all zones.</p>";
+        if (overallPass) {
+          html += "<p class='passed'>Overall result: PASSED. Participant has at least Consistent in all zones.</p>";
+        } else {
+          html += "<p class='not-passed'>Overall result: NOT YET. Participant needs at least Consistent in all zones.</p>";
+        }
+
+        ZONES.forEach(function (zone) {
+          const z = sStats.zones[zone] || { inc: 0, con: 0, refi: 0, total: 0 };
+          const zonePass = z.total > 0 && z.inc === 0;
+          html += "<p>Zone " + zone + ": Inc " + z.inc +
+            ", Con " + z.con + ", Refi " + z.refi +
+            " – " + (zonePass ? "<span class='passed'>Passed</span>" : "<span class='not-passed'>Not yet</span>") +
+            "</p>";
+        });
+
+        html += "</div>";
+      } else {
+        // All participants: compact group summary
+        const names = Array.from(new Set(currentRows.map(r => r.student))).sort();
+        html += "<div class='summary-box'>";
+        html += "<p><strong>Group:</strong> " + (currentGroup || "") + "</p>";
+        html += "<p>To pass, participants must have minimum <strong>Consistent</strong> in all zones (no Inconsistent marks).</p>";
+        html += "<ul>";
+        names.forEach(function (name) {
           const passed = !!passMap[name];
           html += "<li>" + name + ": <span class='" +
             (passed ? "passed" : "not-passed") +
@@ -701,19 +756,12 @@
             (passed ? "Passed" : "Not yet passed") +
             "</span></li>";
         });
-        html += "</ul>";
-      } else {
-        const passed = !!passMap[selectedStudent];
-        html += "<p><strong>" + selectedStudent + ":</strong> <span class='" +
-          (passed ? "passed" : "not-passed") +
-          "'>" +
-          (passed ? "Passed" : "Not yet passed") +
-          "</span></p>";
+        html += "</ul></div>";
       }
 
-      // Table
+      // Table of marks
       html += "<table><tr><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th>Status</th></tr>";
-      rows.forEach(function(row) {
+      rows.forEach(function (row) {
         const longStatus = mapStatusLong(row.status);
         const cls = statusClass(row.status);
         html += "<tr>" +
@@ -741,13 +789,14 @@
 
     loadGroupBtn.addEventListener("click", loadGroupData);
     toggleCourseBtn.addEventListener("click", toggleCourseStatus);
-    participantSelect.addEventListener("change", function() {
+    participantSelect.addEventListener("change", function () {
+      renderParticipantSummary();
       renderTable();
     });
     exportBtn.addEventListener("click", exportCurrentViewToCSV);
     printBtn.addEventListener("click", printCurrentViewToPDF);
 
-    // Initial load of groups
+    // Initial load
     loadGroupList();
   </script>
 </body>
