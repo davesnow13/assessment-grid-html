@@ -78,18 +78,20 @@
       font-size: 0.85rem;
     }
 
-    /* Sticky first column for task names, narrower with wrapping */
+    /* Sticky first column for task names — narrower with wrapping */
     th.task-col,
     td.task-col {
       text-align: left;
-      min-width: 150px;
-      max-width: 180px;
+      min-width: 110px;
+      max-width: 130px;
       background: #f9fbfd;
       position: sticky;
       left: 0;
       z-index: 3;
       white-space: normal;
       word-break: break-word;
+      padding-left: 4px;
+      padding-right: 4px;
     }
 
     th.zone-header {
@@ -193,9 +195,10 @@
     @media (max-width: 600px) {
       th.task-col,
       td.task-col {
-        min-width: 120px;
-        max-width: 140px;
-        font-size: 0.75rem;
+        min-width: 95px;
+        max-width: 115px;
+        font-size: 0.72rem;
+        line-height: 1.15;
       }
       table {
         font-size: 0.75rem;
@@ -387,7 +390,6 @@
 
       if (navigator.onLine) {
         try {
-          // All group names that have any evaluations
           const { data: evalData, error: evalError } = await supabaseClient
             .from("evaluations")
             .select("group_name");
@@ -399,7 +401,6 @@
             console.error("Could not fetch evaluation group names", evalError);
           }
 
-          // Course status (open / closed)
           const { data: courseData, error: courseError } = await supabaseClient
             .from("courses")
             .select("group_name,is_closed");
@@ -413,20 +414,16 @@
         }
       }
 
-      // Closed course names from courses table
       const closedGroups = new Set(
         courseRows
           .filter(row => row.is_closed)
           .map(row => row.group_name)
       );
 
-      // Open courses from courses table
       const openCourses = courseRows
         .filter(row => !row.is_closed)
         .map(row => row.group_name);
 
-      // Cloud groups considered open:
-      // any eval group not closed, plus any explicit open course
       const openCloudGroupsSet = new Set();
       evalGroups.forEach(name => {
         if (!closedGroups.has(name)) {
@@ -435,7 +432,6 @@
       });
       openCourses.forEach(name => openCloudGroupsSet.add(name));
 
-      // Merge locals, excluding closed ones
       const mergedSet = new Set();
 
       localGroups.forEach(name => {
@@ -448,10 +444,8 @@
 
       const mergedList = Array.from(mergedSet).sort((a, b) => a.localeCompare(b));
 
-      // Keep merged list locally for offline use
       saveGroupList(mergedList);
 
-      // Rebuild dropdown
       while (groupSelect.options.length > 1) {
         groupSelect.remove(1);
       }
@@ -629,14 +623,12 @@
 
       let html = "<table>";
 
-      // Top header: task + students
       html += "<tr><th class='task-col'>Task</th>";
       currentStudents.forEach(student => {
         html += `<th class="student-group-header" colspan="${STATUSES.length}">${student}</th>`;
       });
       html += "</tr>";
 
-      // Status header row
       html += "<tr><th class='task-col'></th>";
       currentStudents.forEach(() => {
         STATUSES.forEach(status => {
@@ -649,7 +641,6 @@
 
       TASKS.forEach(task => {
         if (task.zone !== lastZone) {
-          // Zone row with repeated student names
           html += `<tr class="zone-row zone-row-${task.zone}">`;
           html += `<th class="zone-header task-col">Zone ${task.zone}</th>`;
           currentStudents.forEach(student => {
@@ -661,7 +652,6 @@
           lastZone = task.zone;
         }
 
-        // Task row
         html += `<tr><td class="task-col">${task.label}</td>`;
 
         currentStudents.forEach(student => {
