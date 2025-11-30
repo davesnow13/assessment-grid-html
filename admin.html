@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Snowboard Assessment – Admin</title>
+  <title>Snowboard Assessment - Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
@@ -60,16 +60,6 @@
       border-color: #8e0000;
     }
 
-    button.export-btn {
-      background: #455a64;
-      border-color: #37474f;
-    }
-
-    button.print-btn {
-      background: #1565c0;
-      border-color: #0d47a1;
-    }
-
     button:disabled {
       opacity: 0.6;
       cursor: default;
@@ -103,40 +93,37 @@
       color: #1b5e20;
     }
 
-    #participantSummary {
-      font-size: 0.85rem;
-      color: #444;
-      margin: 8px 0 8px 0;
+    #summaryContainer {
+      margin-top: 16px;
     }
 
-    #participantSummary .summary-box {
-      border: 2px solid #999;
-      border-radius: 10px;
-      padding: 10px 12px;
-      background: #ffffff;
+    .summary-card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      border: 1px solid #ccc;
+      margin-bottom: 16px;
     }
 
-    #participantSummary h2 {
-      font-size: 1rem;
-      margin: 0 0 4px 0;
+    .summary-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
     }
 
-    #participantSummary p {
-      margin: 2px 0;
-    }
-
-    #participantSummary .zone-line {
-      margin-top: 2px;
-    }
-
-    #participantSummary .passed {
+    .summary-pass {
       color: #1b5e20;
       font-weight: 600;
     }
 
-    #participantSummary .not-passed {
+    .summary-fail {
       color: #c62828;
       font-weight: 600;
+    }
+
+    .summary-line {
+      margin-top: 4px;
+      font-size: 0.9rem;
     }
 
     #tableContainer {
@@ -187,17 +174,31 @@
         padding: 4px 2px;
       }
     }
+
+    /* Print: hide controls, keep summary and table */
+    @media print {
+      .controls,
+      #statusMsg {
+        display: none !important;
+      }
+      body {
+        background: white;
+      }
+      #summaryContainer,
+      #tableContainer {
+        margin-top: 0;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Snowboard Assessment – Admin</h1>
+  <h1>Snowboard Assessment - Admin</h1>
   <div class="small">
-    View results per group, see course status, and close or reopen courses.  
-    Status names: Inc = Inconsistent, Con = Consistent, Refi = Refined.  
-    A participant passes the assessment if they have a minimum of Consistent in all zones (no Inconsistent marks in any zone).
+    View results per group, filter by participant, close or reopen courses, and export.
+    Status names use the long form: Inconsistent, Consistent, Refined.
+    To pass, a participant must have at least Consistent in every zone (no Inconsistent in any zone).
   </div>
 
-  <!-- Group selection -->
   <div class="controls">
     <label>
       Group:
@@ -205,37 +206,34 @@
         <option value="">Select a group</option>
       </select>
     </label>
-    <button id="loadGroupBtn">Load group data</button>
-  </div>
 
-  <!-- Participant filter + export buttons -->
-  <div class="controls">
+    <button id="loadGroupBtn">Load group data</button>
+
     <label>
-      Participant:
-      <select id="participantSelect" disabled>
-        <option value="">All participants</option>
+      Student:
+      <select id="studentSelect" disabled>
+        <option value="ALL">All students</option>
       </select>
     </label>
 
-    <button id="exportBtn" class="export-btn" disabled>Export CSV (current view)</button>
-    <button id="printBtn" class="print-btn" disabled>Print / PDF (current view)</button>
+    <button id="exportCsvBtn" class="secondary" disabled>Export CSV (group)</button>
+    <button id="printBtn" class="secondary" disabled>Print / PDF current student</button>
   </div>
 
-  <!-- Course status -->
   <div class="controls">
-    <span id="courseStatus">Status: –</span>
+    <span id="courseStatus">Status: -</span>
     <button id="toggleCourseBtn" class="secondary" disabled>Close course</button>
   </div>
 
   <div id="statusMsg"></div>
-  <div id="participantSummary"></div>
 
+  <div id="summaryContainer"></div>
   <div id="tableContainer"></div>
 
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Same Supabase project as index.html
+    // Supabase configuration (same project as index.html)
     const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
     const SUPABASE_ANON_KEY =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
@@ -244,26 +242,21 @@
 
     const groupSelect = document.getElementById("groupSelect");
     const loadGroupBtn = document.getElementById("loadGroupBtn");
-
-    const participantSelect = document.getElementById("participantSelect");
-    const exportBtn = document.getElementById("exportBtn");
-    const printBtn = document.getElementById("printBtn");
-
     const toggleCourseBtn = document.getElementById("toggleCourseBtn");
     const courseStatusSpan = document.getElementById("courseStatus");
-
     const statusMsg = document.getElementById("statusMsg");
-    const participantSummary = document.getElementById("participantSummary");
     const tableContainer = document.getElementById("tableContainer");
+    const summaryContainer = document.getElementById("summaryContainer");
+    const studentSelect = document.getElementById("studentSelect");
+    const exportCsvBtn = document.getElementById("exportCsvBtn");
+    const printBtn = document.getElementById("printBtn");
 
     let currentGroup = null;
     let currentIsClosed = false;
-    let currentRows = [];
-    let statsByStudent = {};
-    let passMap = {};
-    const ZONES = [1, 2, 3];
+    let currentData = [];
+    let currentStudentFilter = "ALL";
 
-    function setMessage(text, isError) {
+    function setMessage(text, isError = false) {
       statusMsg.textContent = text;
       statusMsg.className = isError ? "error" : "success";
     }
@@ -274,9 +267,9 @@
     }
 
     function mapStatusLong(short) {
-      if (short === "Inc") return "Inconsistent (Inc)";
-      if (short === "Con") return "Consistent (Con)";
-      if (short === "Refi") return "Refined (Refi)";
+      if (short === "Inc") return "Inconsistent";
+      if (short === "Con") return "Consistent";
+      if (short === "Refi") return "Refined";
       return short;
     }
 
@@ -287,117 +280,6 @@
       return "";
     }
 
-    // Compute stats per student and zone, and overall pass map
-    function computeStatsAndPassMap(rows) {
-      const stats = {};
-      const passes = {};
-
-      rows.forEach(function (row) {
-        const student = row.student;
-        const zone = row.zone;
-
-        if (!stats[student]) {
-          stats[student] = { zones: {} };
-        }
-        if (!stats[student].zones[zone]) {
-          stats[student].zones[zone] = { inc: 0, con: 0, refi: 0, total: 0 };
-        }
-
-        const z = stats[student].zones[zone];
-        z.total += 1;
-        if (row.status === "Inc") z.inc += 1;
-        else if (row.status === "Con") z.con += 1;
-        else if (row.status === "Refi") z.refi += 1;
-      });
-
-      Object.keys(stats).forEach(function (student) {
-        let ok = true;
-        ZONES.forEach(function (zone) {
-          const z = stats[student].zones[zone];
-          // Zone is valid only if it has at least one mark and no Inc
-          if (!z || z.total === 0 || z.inc > 0) {
-            ok = false;
-          }
-        });
-        passes[student] = ok;
-      });
-
-      return { stats, passes };
-    }
-
-    // Detailed participant summary when single student selected,
-    // or group list when "All participants" is selected
-    function renderParticipantSummary() {
-      if (!currentRows || currentRows.length === 0) {
-        participantSummary.innerHTML = "";
-        return;
-      }
-
-      const selectedStudent = participantSelect.value;
-
-      if (!selectedStudent) {
-        // All participants: show compact pass list
-        const names = Array.from(new Set(currentRows.map(r => r.student))).sort();
-        if (names.length === 0) {
-          participantSummary.innerHTML = "";
-          return;
-        }
-
-        let html = "<div class='summary-box'>";
-        html += "<h2>Participant summary</h2>";
-        html += "<p><strong>Group:</strong> " + (currentGroup || "") + "</p>";
-        html += "<p>To pass, participants must have minimum <strong>Consistent</strong> in all zones (no Inconsistent marks).</p>";
-        html += "<ul>";
-        names.forEach(function (name) {
-          const passed = !!passMap[name];
-          html += "<li>" +
-            name +
-            ": <span class='" +
-            (passed ? "passed" : "not-passed") +
-            "'>" +
-            (passed ? "Passed" : "Not yet passed") +
-            "</span></li>";
-        });
-        html += "</ul></div>";
-
-        participantSummary.innerHTML = html;
-        return;
-      }
-
-      // Single participant summary with per-zone breakdown
-      const sStats = statsByStudent[selectedStudent];
-      if (!sStats) {
-        participantSummary.innerHTML = "";
-        return;
-      }
-      const overallPass = !!passMap[selectedStudent];
-
-      let html = "<div class='summary-box'>";
-      html += "<h2>Participant summary</h2>";
-      html += "<p><strong>Group:</strong> " + (currentGroup || "") + "</p>";
-      html += "<p><strong>Student:</strong> <strong>" + selectedStudent + "</strong></p>";
-      html += "<p>To pass, the participant must have minimum <strong>Consistent</strong> in all zones.</p>";
-
-      if (overallPass) {
-        html += "<p class='passed'>Overall result: PASSED. Participant has at least Consistent in all zones.</p>";
-      } else {
-        html += "<p class='not-passed'>Overall result: NOT YET. Participant needs at least Consistent in all zones.</p>";
-      }
-
-      ZONES.forEach(function (zone) {
-        const z = sStats.zones[zone] || { inc: 0, con: 0, refi: 0, total: 0 };
-        const zonePass = z.total > 0 && z.inc === 0;
-        html += "<p class='zone-line'>Zone " + zone + ": Inc " + z.inc +
-          ", Con " + z.con + ", Refi " + z.refi +
-          " – " + (zonePass ? "<span class='passed'>Passed</span>" : "<span class='not-passed'>Not yet</span>") +
-          "</p>";
-      });
-
-      html += "</div>";
-      participantSummary.innerHTML = html;
-    }
-
-    // Load list of groups using evaluations + courses
     async function loadGroupList() {
       clearMessage();
 
@@ -450,7 +332,7 @@
     }
 
     async function loadCourseStatus(groupName) {
-      courseStatusSpan.textContent = "Status: loading…";
+      courseStatusSpan.textContent = "Status: loading...";
       courseStatusSpan.className = "";
 
       const { data, error } = await supabase
@@ -514,46 +396,109 @@
 
       currentIsClosed = newClosed;
       await loadCourseStatus(currentGroup);
-      await loadGroupList();
+      await loadGroupList(); // refresh labels
 
       setMessage(newClosed ? "Course closed." : "Course reopened.");
     }
 
-    function rebuildParticipantSelect() {
-      while (participantSelect.options.length > 1) {
-        participantSelect.remove(1);
-      }
+    function getFilteredData() {
+      if (currentStudentFilter === "ALL") return currentData;
+      return currentData.filter(row => row.student === currentStudentFilter);
+    }
 
-      if (!currentRows || currentRows.length === 0) {
-        participantSelect.disabled = true;
-        exportBtn.disabled = true;
-        printBtn.disabled = true;
+    function renderSummary() {
+      summaryContainer.innerHTML = "";
+
+      if (currentStudentFilter === "ALL") {
         return;
       }
 
-      const names = Array.from(new Set(currentRows.map(r => r.student))).sort();
+      const rows = currentData.filter(row => row.student === currentStudentFilter);
+      if (rows.length === 0) return;
 
-      names.forEach(name => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        participantSelect.appendChild(opt);
+      const groupName = rows[0].group_name;
+      const student = rows[0].student;
+
+      const zoneMap = new Map();
+      rows.forEach(row => {
+        const z = row.zone;
+        if (!zoneMap.has(z)) {
+          zoneMap.set(z, { Inc: 0, Con: 0, Refi: 0 });
+        }
+        const counts = zoneMap.get(z);
+        if (row.status === "Inc") counts.Inc += 1;
+        else if (row.status === "Con") counts.Con += 1;
+        else if (row.status === "Refi") counts.Refi += 1;
       });
 
-      participantSelect.disabled = false;
-      exportBtn.disabled = false;
-      printBtn.disabled = false;
-    }
+      const zoneSummaries = [];
+      let overallPass = true;
 
-    function getFilteredRows() {
-      if (!currentRows || currentRows.length === 0) return [];
-      const selected = participantSelect.value;
-      if (!selected) return currentRows;
-      return currentRows.filter(row => row.student === selected);
+      Array.from(zoneMap.keys())
+        .sort((a, b) => a - b)
+        .forEach(zone => {
+          const c = zoneMap.get(zone);
+          const zonePass = c.Inc === 0 && (c.Con > 0 || c.Refi > 0);
+          if (!zonePass) overallPass = false;
+          zoneSummaries.push({ zone, counts: c, pass: zonePass });
+        });
+
+      const card = document.createElement("div");
+      card.className = "summary-card";
+
+      const title = document.createElement("div");
+      title.className = "summary-title";
+      title.textContent = "Participant summary";
+      card.appendChild(title);
+
+      const lineGroup = document.createElement("div");
+      lineGroup.className = "summary-line";
+      lineGroup.innerHTML =
+        "Group: <strong>" + groupName + "</strong>";
+      card.appendChild(lineGroup);
+
+      const lineStudent = document.createElement("div");
+      lineStudent.className = "summary-line";
+      lineStudent.innerHTML =
+        "Student: <strong>" + student + "</strong>";
+      card.appendChild(lineStudent);
+
+      const lineRule = document.createElement("div");
+      lineRule.className = "summary-line";
+      lineRule.innerHTML =
+        'To pass, the participant must have minimum <strong>Consistent</strong> in all zones.';
+      card.appendChild(lineRule);
+
+      const lineOverall = document.createElement("div");
+      lineOverall.className = "summary-line " + (overallPass ? "summary-pass" : "summary-fail");
+      lineOverall.innerHTML = overallPass
+        ? "Overall result: PASSED. Participant has at least Consistent in all zones."
+        : "Overall result: NOT YET. Participant needs at least Consistent in all zones.";
+      card.appendChild(lineOverall);
+
+      zoneSummaries.forEach(zs => {
+        const l = document.createElement("div");
+        l.className = "summary-line";
+        const statusText = zs.pass ? "Pass" : "Not yet";
+        l.textContent =
+          "Zone " +
+          zs.zone +
+          ": Inc " +
+          zs.counts.Inc +
+          ", Con " +
+          zs.counts.Con +
+          ", Refi " +
+          zs.counts.Refi +
+          " - " +
+          statusText;
+        card.appendChild(l);
+      });
+
+      summaryContainer.appendChild(card);
     }
 
     function renderTable() {
-      const rows = getFilteredRows();
+      const rows = getFilteredData();
 
       if (!rows || rows.length === 0) {
         tableContainer.innerHTML = "<p>No evaluations found for this selection.</p>";
@@ -561,17 +506,18 @@
       }
 
       let html = "<table>";
-      html += "<tr><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th>Status</th></tr>";
+      html += "<tr><th>Group</th><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th>Status</th></tr>";
 
       rows.forEach(row => {
         const longStatus = mapStatusLong(row.status);
         const cls = statusClass(row.status);
-        html += "<tr>" +
-          "<td>" + row.student + "</td>" +
-          "<td class='zone-cell'>Zone " + row.zone + "</td>" +
-          "<td>" + row.task + "</td>" +
-          "<td class='" + cls + "'>" + longStatus + "</td>" +
-          "</tr>";
+        html += `<tr>
+          <td>${row.group_name}</td>
+          <td>${row.student}</td>
+          <td class="zone-cell">Zone ${row.zone}</td>
+          <td>${row.task}</td>
+          <td class="${cls}">${longStatus}</td>
+        </tr>`;
       });
 
       html += "</table>";
@@ -579,22 +525,22 @@
     }
 
     async function loadGroupData() {
-      const val = groupSelect.value;
-      if (!val) {
+      const groupName = groupSelect.value;
+      if (!groupName) {
         setMessage("Select a group first.", true);
         return;
       }
-
       clearMessage();
-      participantSummary.innerHTML = "";
-      tableContainer.innerHTML = "";
-      toggleCourseBtn.disabled = true;
-      participantSelect.disabled = true;
-      exportBtn.disabled = true;
-      printBtn.disabled = true;
-
-      const groupName = val;
       currentGroup = groupName;
+      tableContainer.innerHTML = "";
+      summaryContainer.innerHTML = "";
+      toggleCourseBtn.disabled = true;
+      studentSelect.disabled = true;
+      exportCsvBtn.disabled = true;
+      printBtn.disabled = true;
+      studentSelect.innerHTML = '<option value="ALL">All students</option>';
+      currentStudentFilter = "ALL";
+      currentData = [];
 
       setMessage("Loading group data...");
 
@@ -615,30 +561,46 @@
       await loadCourseStatus(groupName);
 
       if (!data || data.length === 0) {
-        currentRows = [];
-        statsByStudent = {};
-        passMap = {};
         tableContainer.innerHTML = "<p>No evaluations found for this group.</p>";
-        participantSummary.innerHTML = "";
         setMessage("Loaded, but no data for this group.");
         return;
       }
 
-      currentRows = data;
-      const statsResult = computeStatsAndPassMap(currentRows);
-      statsByStudent = statsResult.stats;
-      passMap = statsResult.passes;
+      currentData = data.slice();
+      // Build student list
+      const studentsSet = new Set();
+      currentData.forEach(row => {
+        if (row.student) studentsSet.add(row.student);
+      });
+      const students = Array.from(studentsSet).sort((a, b) => a.localeCompare(b));
 
-      rebuildParticipantSelect();
-      renderParticipantSummary();
+      students.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        studentSelect.appendChild(opt);
+      });
+
+      studentSelect.disabled = false;
+      exportCsvBtn.disabled = false;
+      printBtn.disabled = (studentSelect.value === "ALL");
+
+      renderSummary();
       renderTable();
+
       setMessage("Group data loaded.");
     }
 
-    function exportCurrentViewToCSV() {
-      const rows = getFilteredRows();
-      if (!rows || rows.length === 0) {
-        setMessage("No data to export for this selection.", true);
+    function onStudentChange() {
+      currentStudentFilter = studentSelect.value;
+      renderSummary();
+      renderTable();
+      printBtn.disabled = currentStudentFilter === "ALL" || currentData.length === 0;
+    }
+
+    function exportCsv() {
+      if (!currentGroup || currentData.length === 0) {
+        setMessage("No data to export.", true);
         return;
       }
 
@@ -646,157 +608,57 @@
       const lines = [];
       lines.push(headers.join(","));
 
-      rows.forEach(row => {
-        const obj = {
+      currentData.forEach(row => {
+        const rowObj = {
           group_name: row.group_name,
           student: row.student,
           zone: row.zone,
           task: row.task,
-          status: row.status
+          status: mapStatusLong(row.status) // export long form
         };
 
-        const vals = headers.map(h => {
-          let v = obj[h];
-          if (v == null) v = "";
-          v = String(v).replace(/"/g, '""');
-          if (v.search(/[",\n]/) !== -1) v = '"' + v + '"';
-          return v;
+        const values = headers.map(h => {
+          let val = rowObj[h];
+          if (val == null) val = "";
+          val = String(val).replace(/"/g, '""');
+          if (val.search(/[",\n]/) !== -1) {
+            val = '"' + val + '"';
+          }
+          return val;
         });
 
-        lines.push(vals.join(","));
+        lines.push(values.join(","));
       });
 
       const csvContent = lines.join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
-      const namePart = currentGroup ? currentGroup.replace(/\s+/g, "_") : "group";
 
       const link = document.createElement("a");
       link.href = url;
-      link.download = "snowboard_assessment_admin_" + namePart + ".csv";
+      link.download = `snowboard_assessment_admin_${currentGroup.replace(/\s+/g, "_")}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setMessage("CSV exported for current view.");
+      setMessage("CSV exported for this group.");
     }
 
-    function printCurrentViewToPDF() {
-      const rows = getFilteredRows();
-      if (!rows || rows.length === 0) {
-        setMessage("No data to print/export for this selection.", true);
+    function printCurrent() {
+      if (currentStudentFilter === "ALL") {
+        setMessage("Select a student before printing.", true);
         return;
       }
-
-      const selectedStudent = participantSelect.value;
-      const titleGroup = currentGroup || "Group";
-      let titleText = "Snowboard Assessment – " + titleGroup;
-      if (selectedStudent) {
-        titleText += " – " + selectedStudent;
-      }
-
-      let html = "<!DOCTYPE html><html><head><meta charset='UTF-8' />";
-      html += "<title>" + titleText + "</title>";
-      html += "<style>";
-      html += "body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; padding: 16px; }";
-      html += "h1 { font-size: 1.2rem; margin-bottom: 8px; }";
-      html += "p { font-size: 0.85rem; }";
-      html += "table { border-collapse: collapse; width: 100%; margin-top: 12px; }";
-      html += "th, td { border: 1px solid #999; padding: 4px; font-size: 0.8rem; }";
-      html += "th { background: #e0e0e0; }";
-      html += ".status-inc { background: #ffebee; }";
-      html += ".status-con { background: #fffde7; }";
-      html += ".status-refi { background: #e8f5e9; }";
-      html += ".zone-cell { text-align: center; width: 60px; }";
-      html += ".passed { color: #1b5e20; font-weight: 600; }";
-      html += ".not-passed { color: #c62828; font-weight: 600; }";
-      html += ".summary-box { border: 2px solid #999; border-radius: 10px; padding: 10px 12px; background: #ffffff; margin-bottom: 12px; }";
-      html += "</style></head><body>";
-
-      html += "<h1>" + titleText + "</h1>";
-
-      if (selectedStudent) {
-        // Single participant print summary
-        const sStats = statsByStudent[selectedStudent];
-        const overallPass = !!passMap[selectedStudent];
-
-        html += "<div class='summary-box'>";
-        html += "<p><strong>Group:</strong> " + (currentGroup || "") + "</p>";
-        html += "<p><strong>Student:</strong> <strong>" + selectedStudent + "</strong></p>";
-        html += "<p>To pass, the participant must have minimum <strong>Consistent</strong> in all zones.</p>";
-        if (overallPass) {
-          html += "<p class='passed'>Overall result: PASSED. Participant has at least Consistent in all zones.</p>";
-        } else {
-          html += "<p class='not-passed'>Overall result: NOT YET. Participant needs at least Consistent in all zones.</p>";
-        }
-
-        ZONES.forEach(function (zone) {
-          const z = sStats.zones[zone] || { inc: 0, con: 0, refi: 0, total: 0 };
-          const zonePass = z.total > 0 && z.inc === 0;
-          html += "<p>Zone " + zone + ": Inc " + z.inc +
-            ", Con " + z.con + ", Refi " + z.refi +
-            " – " + (zonePass ? "<span class='passed'>Passed</span>" : "<span class='not-passed'>Not yet</span>") +
-            "</p>";
-        });
-
-        html += "</div>";
-      } else {
-        // All participants: compact group summary
-        const names = Array.from(new Set(currentRows.map(r => r.student))).sort();
-        html += "<div class='summary-box'>";
-        html += "<p><strong>Group:</strong> " + (currentGroup || "") + "</p>";
-        html += "<p>To pass, participants must have minimum <strong>Consistent</strong> in all zones (no Inconsistent marks).</p>";
-        html += "<ul>";
-        names.forEach(function (name) {
-          const passed = !!passMap[name];
-          html += "<li>" + name + ": <span class='" +
-            (passed ? "passed" : "not-passed") +
-            "'>" +
-            (passed ? "Passed" : "Not yet passed") +
-            "</span></li>";
-        });
-        html += "</ul></div>";
-      }
-
-      // Table of marks
-      html += "<table><tr><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th>Status</th></tr>";
-      rows.forEach(function (row) {
-        const longStatus = mapStatusLong(row.status);
-        const cls = statusClass(row.status);
-        html += "<tr>" +
-          "<td>" + row.student + "</td>" +
-          "<td class='zone-cell'>Zone " + row.zone + "</td>" +
-          "<td>" + row.task + "</td>" +
-          "<td class='" + cls + "'>" + longStatus + "</td>" +
-          "</tr>";
-      });
-      html += "</table>";
-
-      html += "</body></html>";
-
-      const win = window.open("", "_blank");
-      if (!win) {
-        setMessage("Browser blocked the print window. Allow pop-ups and try again.", true);
-        return;
-      }
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
-      win.focus();
-      win.print();
+      window.print();
     }
 
     loadGroupBtn.addEventListener("click", loadGroupData);
     toggleCourseBtn.addEventListener("click", toggleCourseStatus);
-    participantSelect.addEventListener("change", function () {
-      renderParticipantSummary();
-      renderTable();
-    });
-    exportBtn.addEventListener("click", exportCurrentViewToCSV);
-    printBtn.addEventListener("click", printCurrentViewToPDF);
+    studentSelect.addEventListener("change", onStudentChange);
+    exportCsvBtn.addEventListener("click", exportCsv);
+    printBtn.addEventListener("click", printCurrent);
 
-    // Initial load
     loadGroupList();
   </script>
 </body>
