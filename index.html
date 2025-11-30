@@ -78,15 +78,18 @@
       font-size: 0.85rem;
     }
 
-    /* Sticky first column for task names */
+    /* Sticky first column for task names, narrower with wrapping */
     th.task-col,
     td.task-col {
       text-align: left;
-      min-width: 210px;
+      min-width: 150px;
+      max-width: 180px;
       background: #f9fbfd;
       position: sticky;
       left: 0;
       z-index: 3;
+      white-space: normal;
+      word-break: break-word;
     }
 
     th.zone-header {
@@ -104,15 +107,15 @@
 
     /* Zone row background colors */
     .zone-row-1 th {
-      background: #e3f2fd; /* light blue */
+      background: #e3f2fd;
     }
 
     .zone-row-2 th {
-      background: #e8f5e9; /* light green */
+      background: #e8f5e9;
     }
 
     .zone-row-3 th {
-      background: #fff3e0; /* light orange */
+      background: #fff3e0;
     }
 
     /* Base status cell */
@@ -186,8 +189,14 @@
       color: #1b5e20;
     }
 
-    /* Smaller screens: slightly bigger tap targets */
-    @media (max-width: 900px) {
+    /* Smaller screens: narrower first column and bigger tap targets */
+    @media (max-width: 600px) {
+      th.task-col,
+      td.task-col {
+        min-width: 120px;
+        max-width: 140px;
+        font-size: 0.75rem;
+      }
       table {
         font-size: 0.75rem;
       }
@@ -200,7 +209,7 @@
       }
     }
 
-    /* Touch / glove-friendly */
+    /* Touch or gloves */
     @media (pointer: coarse) {
       .status-inner {
         width: 30px;
@@ -369,7 +378,7 @@
     }
 
     // Fetch group names from Supabase and local storage,
-    // but hide groups that are closed in the "courses" table.
+    // hide groups that are closed in the "courses" table.
     async function refreshGroupSelectOptions() {
       const localGroups = loadGroupList();
 
@@ -404,20 +413,20 @@
         }
       }
 
-      // Sets of closed and open course names from courses table
+      // Closed course names from courses table
       const closedGroups = new Set(
         courseRows
           .filter(row => row.is_closed)
           .map(row => row.group_name)
       );
 
+      // Open courses from courses table
       const openCourses = courseRows
         .filter(row => !row.is_closed)
         .map(row => row.group_name);
 
-      // Cloud groups that are considered open:
-      //  - any group from evaluations that is not closed
-      //  - plus any group from courses that is marked open
+      // Cloud groups considered open:
+      // any eval group not closed, plus any explicit open course
       const openCloudGroupsSet = new Set();
       evalGroups.forEach(name => {
         if (!closedGroups.has(name)) {
@@ -439,7 +448,7 @@
 
       const mergedList = Array.from(mergedSet).sort((a, b) => a.localeCompare(b));
 
-      // Keep merged list locally, so offline use still sees everything once seen
+      // Keep merged list locally for offline use
       saveGroupList(mergedList);
 
       // Rebuild dropdown
