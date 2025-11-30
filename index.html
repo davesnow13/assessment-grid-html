@@ -342,7 +342,7 @@
       statusMsg.className = "message " + (isError ? "error" : "success");
     }
 
-    // Group list helpers
+    // Group list helpers (local)
     function loadGroupList() {
       try {
         const raw = localStorage.getItem(LOCAL_GROUPS_KEY);
@@ -368,12 +368,38 @@
       }
     }
 
-    function refreshGroupSelectOptions() {
-      const list = loadGroupList().slice().sort((a, b) => a.localeCompare(b));
+    // NEW: fetch distinct group names from Supabase and merge with local
+    async function refreshGroupSelectOptions() {
+      const localList = loadGroupList();
+
+      let cloudGroups = [];
+      if (navigator.onLine) {
+        try {
+          const { data, error } = await supabaseClient
+            .from("evaluations")
+            .select("group_name");
+          if (!error && data) {
+            cloudGroups = data
+              .map(row => row.group_name)
+              .filter(name => typeof name === "string" && name.trim().length > 0);
+          }
+        } catch (e) {
+          console.error("Could not fetch cloud group names", e);
+        }
+      }
+
+      // Merge and deduplicate
+      const mergedSet = new Set([...localList, ...cloudGroups]);
+      const mergedList = Array.from(mergedSet).sort((a, b) => a.localeCompare(b));
+
+      // Optionally update local storage with the merged list, so future offline use sees everything seen once
+      saveGroupList(mergedList);
+
+      // Rebuild dropdown
       while (groupSelect.options.length > 1) {
         groupSelect.remove(1);
       }
-      list.forEach(name => {
+      mergedList.forEach(name => {
         const opt = document.createElement("option");
         opt.value = name;
         opt.textContent = name;
@@ -526,7 +552,10 @@
       }
     }
 
-    window.addEventListener("online", processQueue);
+    window.addEventListener("online", () => {
+      processQueue();
+      refreshGroupSelectOptions();
+    });
 
     // Table rendering
     function renderTable() {
