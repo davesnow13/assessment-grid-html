@@ -78,7 +78,7 @@
       font-size: 0.85rem;
     }
 
-    /* Sticky first column for task names – narrower, wrapping, same font size */
+    /* Sticky first column – narrower, wrapping */
     th.task-col,
     td.task-col {
       text-align: left;
@@ -193,7 +193,7 @@
       color: #1b5e20;
     }
 
-    /* Smaller screens: keep font size, slightly tighter layout, bigger tap targets */
+    /* Small screens: keep font size, slightly tighter layout, bigger tap targets */
     @media (max-width: 600px) {
       th.task-col,
       td.task-col {
@@ -213,7 +213,7 @@
       }
     }
 
-    /* Touch or gloves */
+    /* Touch / gloves */
     @media (pointer: coarse) {
       .status-inner {
         width: 30px;
@@ -476,41 +476,6 @@
       }
     }
 
-    // Fetch distinct students for a group from Supabase, fallback to local state
-    async function setStudentsForGroup(groupName) {
-      let students = [];
-
-      if (navigator.onLine) {
-        try {
-          const { data, error } = await supabaseClient
-            .from("evaluations")
-            .select("student")
-            .eq("group_name", groupName);
-
-          if (!error && data) {
-            const set = new Set(
-              data
-                .map(row => row.student)
-                .filter(s => typeof s === "string" && s.trim().length > 0)
-            );
-            students = Array.from(set);
-          } else if (error) {
-            console.error("Could not fetch students for group", error);
-          }
-        } catch (e) {
-          console.error("Error fetching students for group", e);
-        }
-      }
-
-      if (students.length === 0) {
-        setStudentsFromLocalState(groupName);
-      } else {
-        studentsInput.value = students.join(", ");
-      }
-
-      currentStudents = parseStudents();
-    }
-
     // Local state helpers
     function localKey(student, zone, task) {
       return `${student}|${zone}|${task}`;
@@ -757,7 +722,21 @@
 
       registerGroupName(groupName);
 
+      // Offline: build table from local state if needed
       if (!navigator.onLine) {
+        if (currentStudents.length === 0) {
+          const state = loadGroupState(groupName);
+          const studentsSet = new Set();
+          Object.keys(state).forEach(key => {
+            const [student] = key.split("|");
+            if (student) studentsSet.add(student);
+          });
+          if (studentsSet.size > 0) {
+            studentsInput.value = Array.from(studentsSet).join(", ");
+            currentStudents = parseStudents();
+            renderTable();
+          }
+        }
         applyLocalStateToUI(groupName);
         setMessage("Offline: showing marks stored on this device.");
         return;
@@ -775,6 +754,20 @@
       if (error) {
         console.error(error);
         setMessage("Failed to load from cloud. Keeping local marks.", true);
+
+        if (currentStudents.length === 0) {
+          const state = loadGroupState(groupName);
+          const studentsSet = new Set();
+          Object.keys(state).forEach(key => {
+            const [student] = key.split("|");
+            if (student) studentsSet.add(student);
+          });
+          if (studentsSet.size > 0) {
+            studentsInput.value = Array.from(studentsSet).join(", ");
+            currentStudents = parseStudents();
+            renderTable();
+          }
+        }
         applyLocalStateToUI(groupName);
         return;
       }
@@ -782,14 +775,35 @@
       const localState = loadGroupState(groupName);
       const mergedState = { ...localState };
 
-      data.forEach(row => {
-        const key = localKey(row.student, row.zone, row.task);
-        if (mergedState[key] == null) {
-          mergedState[key] = row.status;
-        }
-      });
+      if (Array.isArray(data)) {
+        data.forEach(row => {
+          const key = localKey(row.student, row.zone, row.task);
+          if (mergedState[key] == null) {
+            mergedState[key] = row.status;
+          }
+        });
+      }
 
       saveGroupState(groupName, mergedState);
+
+      // If we do not yet have students / table, build from mergedState
+      if (currentStudents.length === 0) {
+        const studentsSet = new Set();
+        Object.keys(mergedState).forEach(key => {
+          const [student] = key.split("|");
+          if (student) studentsSet.add(student);
+        });
+        if (studentsSet.size > 0) {
+          studentsInput.value = Array.from(studentsSet).join(", ");
+          currentStudents = parseStudents();
+          renderTable();
+        }
+      }
+
+      // If still no table (no marks yet), but we somehow have students
+      if (currentStudents.length > 0 && tableContainer.innerHTML.trim() === "") {
+        renderTable();
+      }
 
       document.querySelectorAll(".status-inner").forEach(node => node.classList.remove("selected"));
       applyLocalStateToUI(groupName);
@@ -859,27 +873,18 @@
     async function initFromURLGroup() {
       const urlGroup = getQueryParam("group");
       if (!urlGroup) return false;
-
       const groupName = urlGroup.trim();
       if (!groupName) return false;
-
       groupNameInput.value = groupName;
       registerGroupName(groupName);
-
-      await setStudentsForGroup(groupName);
-      if (currentStudents.length === 0) {
-        currentStudents = parseStudents();
-      }
-
-      renderTable();
       await loadSavedMarks();
       return true;
     }
 
     // Initial layout
     (async function init() {
-      refreshGroupSelectOptions();
-      processQueue();
+      await refreshGroupSelectOptions();
+      await processQueue();
 
       const handled = await initFromURLGroup();
       if (!handled) {
