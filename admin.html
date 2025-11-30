@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,6 +60,16 @@
       border-color: #8e0000;
     }
 
+    button.export-btn {
+      background: #455a64;
+      border-color: #37474f;
+    }
+
+    button.print-btn {
+      background: #1565c0;
+      border-color: #0d47a1;
+    }
+
     button:disabled {
       opacity: 0.6;
       cursor: default;
@@ -92,6 +101,22 @@
 
     #statusMsg.success {
       color: #1b5e20;
+    }
+
+    #participantSummary {
+      font-size: 0.8rem;
+      color: #444;
+      margin: 8px 0 8px 0;
+    }
+
+    #participantSummary .passed {
+      color: #1b5e20;
+      font-weight: 600;
+    }
+
+    #participantSummary .not-passed {
+      color: #c62828;
+      font-weight: 600;
     }
 
     #tableContainer {
@@ -147,10 +172,13 @@
 <body>
   <h1>Snowboard Assessment – Admin</h1>
   <div class="small">
-    View results per group, see course status, and close or reopen courses.
-    Status names are expanded: Inc = Inconsistent, Con = Consistent, Refi = Refined.
+    View results per group, see course status, and close or reopen courses.  
+    Status names: Inc = Inconsistent, Con = Consistent, Refi = Refined.  
+    A participant passes the assessment if they have at least Consistent in all zones
+    (no Inconsistent marks in any zone).
   </div>
 
+  <!-- Group selection -->
   <div class="controls">
     <label>
       Group:
@@ -158,16 +186,30 @@
         <option value="">Select a group</option>
       </select>
     </label>
-
     <button id="loadGroupBtn">Load group data</button>
   </div>
 
+  <!-- Participant filter + export buttons -->
+  <div class="controls">
+    <label>
+      Participant:
+      <select id="participantSelect" disabled>
+        <option value="">All participants</option>
+      </select>
+    </label>
+
+    <button id="exportBtn" class="export-btn" disabled>Export CSV (current view)</button>
+    <button id="printBtn" class="print-btn" disabled>Print / PDF (current view)</button>
+  </div>
+
+  <!-- Course status -->
   <div class="controls">
     <span id="courseStatus">Status: –</span>
     <button id="toggleCourseBtn" class="secondary" disabled>Close course</button>
   </div>
 
   <div id="statusMsg"></div>
+  <div id="participantSummary"></div>
 
   <div id="tableContainer"></div>
 
@@ -183,15 +225,25 @@
 
     const groupSelect = document.getElementById("groupSelect");
     const loadGroupBtn = document.getElementById("loadGroupBtn");
+
+    const participantSelect = document.getElementById("participantSelect");
+    const exportBtn = document.getElementById("exportBtn");
+    const printBtn = document.getElementById("printBtn");
+
     const toggleCourseBtn = document.getElementById("toggleCourseBtn");
     const courseStatusSpan = document.getElementById("courseStatus");
+
     const statusMsg = document.getElementById("statusMsg");
+    const participantSummary = document.getElementById("participantSummary");
     const tableContainer = document.getElementById("tableContainer");
 
     let currentGroup = null;
     let currentIsClosed = false;
+    let currentRows = [];          // all evaluations for current group
+    let currentParticipants = [];  // list of participants in current group
+    const ZONES = [1, 2, 3];       // used for pass/fail logic
 
-    function setMessage(text, isError = false) {
+    function setMessage(text, isError) {
       statusMsg.textContent = text;
       statusMsg.className = isError ? "error" : "success";
     }
@@ -215,6 +267,88 @@
       return "";
     }
 
+    // Compute pass/fail: participant passes if every task in every zone has Con or Refi
+    function computePassMap(rows) {
+      const perStudent = {};
+
+      rows.forEach(function(row) {
+        const student = row.student;
+        const zone = row.zone;
+        const status = row.status;
+
+        if (!perStudent[student]) {
+          perStudent[student] = {
+            zones: {}
+          };
+        }
+        if (!perStudent[student].zones[zone]) {
+          perStudent[student].zones[zone] = {
+            anyMarked: false,
+            allConsistent: true
+          };
+        }
+
+        const z = perStudent[student].zones[zone];
+        z.anyMarked = true;
+
+        // Anything not Con or Refi is considered "not consistent enough"
+        if (status !== "Con" && status !== "Refi") {
+          z.allConsistent = false;
+        }
+      });
+
+      const passMap = {};
+      Object.keys(perStudent).forEach(function(student) {
+        const zoneInfo = perStudent[student].zones;
+        let passes = true;
+
+        ZONES.forEach(function(zone) {
+          const info = zoneInfo[zone];
+          // If zone has no marks or contains any Inc or missing consistent, participant does not pass
+          if (!info || !info.anyMarked || !info.allConsistent) {
+            passes = false;
+          }
+        });
+
+        passMap[student] = passes;
+      });
+
+      return passMap;
+    }
+
+    // Build summary text for all participants in current group
+    function renderParticipantSummary() {
+      if (!currentRows || currentRows.length === 0) {
+        participantSummary.textContent = "";
+        return;
+      }
+
+      const passMap = computePassMap(currentRows);
+      const names = Array.from(new Set(currentRows.map(function(r) { return r.student; }))).sort();
+
+      if (names.length === 0) {
+        participantSummary.textContent = "";
+        return;
+      }
+
+      let html = "<strong>Participant results (group pass check = minimum Consistent in all zones):</strong><br />";
+      html += "<ul>";
+      names.forEach(function(name) {
+        const passed = !!passMap[name];
+        html += "<li>" +
+          name +
+          ": <span class=\"" +
+          (passed ? "passed" : "not-passed") +
+          "\">" +
+          (passed ? "Passed" : "Not yet passed") +
+          "</span></li>";
+      });
+      html += "</ul>";
+
+      participantSummary.innerHTML = html;
+    }
+
+    // Load list of groups from evaluations + courses
     async function loadGroupList() {
       clearMessage();
 
@@ -234,30 +368,36 @@
 
         const groupsSet = new Set();
         if (evalData) {
-          evalData.forEach(row => {
-            if (row.group_name) groupsSet.add(row.group_name);
+          evalData.forEach(function(row) {
+            if (row.group_name) {
+              groupsSet.add(row.group_name);
+            }
           });
         }
         if (courseData) {
-          courseData.forEach(row => {
-            if (row.group_name) groupsSet.add(row.group_name);
+          courseData.forEach(function(row) {
+            if (row.group_name) {
+              groupsSet.add(row.group_name);
+            }
           });
         }
 
         const closedMap = new Map();
         if (courseData) {
-          courseData.forEach(row => {
+          courseData.forEach(function(row) {
             closedMap.set(row.group_name, !!row.is_closed);
           });
         }
 
-        const groups = Array.from(groupsSet).sort((a, b) => a.localeCompare(b));
+        const groups = Array.from(groupsSet).sort(function(a, b) {
+          return a.localeCompare(b);
+        });
 
         while (groupSelect.options.length > 1) {
           groupSelect.remove(1);
         }
 
-        groups.forEach(name => {
+        groups.forEach(function(name) {
           const opt = document.createElement("option");
           const isClosed = closedMap.get(name);
           opt.value = name;
@@ -340,16 +480,92 @@
       setMessage(newClosed ? "Course closed." : "Course reopened.");
     }
 
+    function rebuildParticipantSelect() {
+      while (participantSelect.options.length > 1) {
+        participantSelect.remove(1);
+      }
+
+      if (!currentRows || currentRows.length === 0) {
+        participantSelect.disabled = true;
+        exportBtn.disabled = true;
+        printBtn.disabled = true;
+        return;
+      }
+
+      const names = Array.from(new Set(currentRows.map(function(r) {
+        return r.student;
+      }))).sort();
+
+      currentParticipants = names;
+
+      names.forEach(function(name) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        participantSelect.appendChild(opt);
+      });
+
+      participantSelect.disabled = false;
+      exportBtn.disabled = false;
+      printBtn.disabled = false;
+    }
+
+    function getFilteredRows() {
+      if (!currentRows || currentRows.length === 0) {
+        return [];
+      }
+      const selectedStudent = participantSelect.value;
+      if (!selectedStudent) {
+        return currentRows;
+      }
+      return currentRows.filter(function(row) {
+        return row.student === selectedStudent;
+      });
+    }
+
+    function renderTable() {
+      const rows = getFilteredRows();
+
+      if (!rows || rows.length === 0) {
+        tableContainer.innerHTML = "<p>No evaluations found for this selection.</p>";
+        return;
+      }
+
+      let html = "<table>";
+      html += "<tr><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th>Status</th></tr>";
+
+      rows.forEach(function(row) {
+        const longStatus = mapStatusLong(row.status);
+        const cls = statusClass(row.status);
+        html += "<tr>" +
+          "<td>" + row.student + "</td>" +
+          "<td class='zone-cell'>Zone " + row.zone + "</td>" +
+          "<td>" + row.task + "</td>" +
+          "<td class='" + cls + "'>" + longStatus + "</td>" +
+          "</tr>";
+      });
+
+      html += "</table>";
+      tableContainer.innerHTML = html;
+    }
+
     async function loadGroupData() {
-      const groupName = groupSelect.value;
-      if (!groupName) {
+      const selected = groupSelect.value;
+      if (!selected) {
         setMessage("Select a group first.", true);
         return;
       }
       clearMessage();
-      currentGroup = groupName;
+      participantSummary.textContent = "";
       tableContainer.innerHTML = "";
       toggleCourseBtn.disabled = true;
+      participantSelect.disabled = true;
+      exportBtn.disabled = true;
+      printBtn.disabled = true;
+
+      // Value in select is the raw group name (without "(closed)" suffix)
+      const groupName = selected;
+      currentGroup = groupName;
 
       setMessage("Loading group data...");
 
@@ -370,35 +586,168 @@
       await loadCourseStatus(groupName);
 
       if (!data || data.length === 0) {
+        currentRows = [];
         tableContainer.innerHTML = "<p>No evaluations found for this group.</p>";
+        participantSummary.textContent = "";
         setMessage("Loaded, but no data for this group.");
         return;
       }
 
-      // Build a table: Student | Zone | Task | Status (long)
-      let html = "<table>";
-      html += "<tr><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th>Status</th></tr>";
+      currentRows = data;
+      rebuildParticipantSelect();
+      renderParticipantSummary();
+      renderTable();
+      setMessage("Group data loaded.");
+    }
 
-      data.forEach(row => {
-        const longStatus = mapStatusLong(row.status);
-        const cls = statusClass(row.status);
-        html += `<tr>
-          <td>${row.student}</td>
-          <td class="zone-cell">Zone ${row.zone}</td>
-          <td>${row.task}</td>
-          <td class="${cls}">${longStatus}</td>
-        </tr>`;
+    function exportCurrentViewToCSV() {
+      const rows = getFilteredRows();
+      if (!rows || rows.length === 0) {
+        setMessage("No data to export for this selection.", true);
+        return;
+      }
+
+      const passMap = computePassMap(currentRows);
+
+      const headers = ["group_name", "student", "zone", "task", "status", "passed_all_zones"];
+      const lines = [];
+      lines.push(headers.join(","));
+
+      rows.forEach(function(row) {
+        const passed = passMap[row.student] ? "yes" : "no";
+        const rowObj = {
+          group_name: row.group_name,
+          student: row.student,
+          zone: row.zone,
+          task: row.task,
+          status: row.status,
+          passed_all_zones: passed
+        };
+
+        const values = headers.map(function(h) {
+          let val = rowObj[h];
+          if (val == null) val = "";
+          val = String(val).replace(/"/g, '""');
+          if (val.search(/[",\n]/) !== -1) {
+            val = '"' + val + '"';
+          }
+          return val;
+        });
+
+        lines.push(values.join(","));
       });
 
-      html += "</table>";
-      tableContainer.innerHTML = html;
+      const csvContent = lines.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const namePart = currentGroup ? currentGroup.replace(/\s+/g, "_") : "group";
 
-      setMessage("Group data loaded.");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "snowboard_assessment_admin_" + namePart + ".csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setMessage("CSV exported for current view.");
+    }
+
+    function printCurrentViewToPDF() {
+      const rows = getFilteredRows();
+      if (!rows || rows.length === 0) {
+        setMessage("No data to print/export for this selection.", true);
+        return;
+      }
+
+      const passMap = computePassMap(currentRows);
+      const selectedStudent = participantSelect.value;
+      const titleGroup = currentGroup || "Group";
+
+      let titleText = "Snowboard Assessment – " + titleGroup;
+      if (selectedStudent) {
+        titleText += " – " + selectedStudent;
+      }
+
+      let html = "<!DOCTYPE html><html><head><meta charset='UTF-8' />";
+      html += "<title>" + titleText + "</title>";
+      html += "<style>";
+      html += "body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; padding: 16px; }";
+      html += "h1 { font-size: 1.2rem; margin-bottom: 8px; }";
+      html += "p { font-size: 0.85rem; }";
+      html += "table { border-collapse: collapse; width: 100%; margin-top: 12px; }";
+      html += "th, td { border: 1px solid #999; padding: 4px; font-size: 0.8rem; }";
+      html += "th { background: #e0e0e0; }";
+      html += ".status-inc { background: #ffebee; }";
+      html += ".status-con { background: #fffde7; }";
+      html += ".status-refi { background: #e8f5e9; }";
+      html += ".zone-cell { text-align: center; width: 60px; }";
+      html += ".passed { color: #1b5e20; font-weight: 600; }";
+      html += ".not-passed { color: #c62828; font-weight: 600; }";
+      html += "</style></head><body>";
+
+      html += "<h1>" + titleText + "</h1>";
+      html += "<p>A participant passes the assessment if they have a minimum of Consistent (Con) in all zones (no Inconsistent marks in any zone).</p>";
+
+      if (!selectedStudent) {
+        // Summary for all participants
+        const names = Array.from(new Set(currentRows.map(function(r) { return r.student; }))).sort();
+        html += "<p><strong>Group pass summary:</strong></p><ul>";
+        names.forEach(function(name) {
+          const passed = !!passMap[name];
+          html += "<li>" + name + ": <span class='" +
+            (passed ? "passed" : "not-passed") +
+            "'>" +
+            (passed ? "Passed" : "Not yet passed") +
+            "</span></li>";
+        });
+        html += "</ul>";
+      } else {
+        const passed = !!passMap[selectedStudent];
+        html += "<p><strong>" + selectedStudent + ":</strong> <span class='" +
+          (passed ? "passed" : "not-passed") +
+          "'>" +
+          (passed ? "Passed" : "Not yet passed") +
+          "</span></p>";
+      }
+
+      // Table
+      html += "<table><tr><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th>Status</th></tr>";
+      rows.forEach(function(row) {
+        const longStatus = mapStatusLong(row.status);
+        const cls = statusClass(row.status);
+        html += "<tr>" +
+          "<td>" + row.student + "</td>" +
+          "<td class='zone-cell'>Zone " + row.zone + "</td>" +
+          "<td>" + row.task + "</td>" +
+          "<td class='" + cls + "'>" + longStatus + "</td>" +
+          "</tr>";
+      });
+      html += "</table>";
+
+      html += "</body></html>";
+
+      const win = window.open("", "_blank");
+      if (!win) {
+        setMessage("Browser blocked the print window. Allow pop-ups and try again.", true);
+        return;
+      }
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      win.print();
     }
 
     loadGroupBtn.addEventListener("click", loadGroupData);
     toggleCourseBtn.addEventListener("click", toggleCourseStatus);
+    participantSelect.addEventListener("change", function() {
+      renderTable();
+    });
+    exportBtn.addEventListener("click", exportCurrentViewToCSV);
+    printBtn.addEventListener("click", printCurrentViewToPDF);
 
+    // Initial load of groups
     loadGroupList();
   </script>
 </body>
