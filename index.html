@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -78,23 +79,23 @@
       font-size: 0.85rem;
     }
 
-    /* Sticky first column – narrower, wrapping */
+    /* Sticky first column for task names — narrower with wrapping */
     th.task-col,
-    td.task-col {
-      text-align: left;
-      min-width: 80px;
-      max-width: 95px;
-      background: #f9fbfd;
-      position: sticky;
-      left: 0;
-      z-index: 3;
-      white-space: normal;
-      word-break: break-word;
-      padding-left: 4px;
-      padding-right: 4px;
-      font-size: inherit;
-      line-height: 1.1;
-    }
+td.task-col {
+  text-align: left;
+  min-width: 70px;       /* was 110 */
+  max-width: 85px;       /* was ~130 */
+  background: #f9fbfd;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  white-space: normal;   /* allow wrapping */
+  word-break: break-word;
+  padding-left: 4px;
+  padding-right: 4px;
+  font-size: inherit;    /* keeps the same font size */
+  line-height: 1.1;      /* keeps wrapping tight */
+}
 
     th.zone-header {
       text-align: left;
@@ -193,16 +194,17 @@
       color: #1b5e20;
     }
 
-    /* Small screens: keep font size, slightly tighter layout, bigger tap targets */
+    /* Smaller screens: narrower first column and bigger tap targets */
     @media (max-width: 600px) {
       th.task-col,
       td.task-col {
-        min-width: 70px;
-        max-width: 90px;
-        line-height: 1.1;
+        min-width: 95px;
+        max-width: 115px;
+        font-size: 0.72rem;
+        line-height: 1.15;
       }
       table {
-        font-size: 0.85rem;
+        font-size: 0.75rem;
       }
       th, td {
         padding: 4px 2px;
@@ -213,7 +215,7 @@
       }
     }
 
-    /* Touch / gloves */
+    /* Touch or gloves */
     @media (pointer: coarse) {
       .status-inner {
         width: 30px;
@@ -353,12 +355,6 @@
     function setMessage(text, isError = false) {
       statusMsg.textContent = text;
       statusMsg.className = "message " + (isError ? "error" : "success");
-    }
-
-    function getQueryParam(name) {
-      const params = new URLSearchParams(window.location.search);
-      const value = params.get(name);
-      return value ? value : null;
     }
 
     // Group list helpers (local)
@@ -655,7 +651,7 @@
                        ${student}
                      </th>`;
           });
-          html += "</tr>`;
+          html += "</tr>";
           lastZone = task.zone;
         }
 
@@ -722,21 +718,7 @@
 
       registerGroupName(groupName);
 
-      // Offline: build table from local state if needed
       if (!navigator.onLine) {
-        if (currentStudents.length === 0) {
-          const state = loadGroupState(groupName);
-          const studentsSet = new Set();
-          Object.keys(state).forEach(key => {
-            const [student] = key.split("|");
-            if (student) studentsSet.add(student);
-          });
-          if (studentsSet.size > 0) {
-            studentsInput.value = Array.from(studentsSet).join(", ");
-            currentStudents = parseStudents();
-            renderTable();
-          }
-        }
         applyLocalStateToUI(groupName);
         setMessage("Offline: showing marks stored on this device.");
         return;
@@ -754,20 +736,6 @@
       if (error) {
         console.error(error);
         setMessage("Failed to load from cloud. Keeping local marks.", true);
-
-        if (currentStudents.length === 0) {
-          const state = loadGroupState(groupName);
-          const studentsSet = new Set();
-          Object.keys(state).forEach(key => {
-            const [student] = key.split("|");
-            if (student) studentsSet.add(student);
-          });
-          if (studentsSet.size > 0) {
-            studentsInput.value = Array.from(studentsSet).join(", ");
-            currentStudents = parseStudents();
-            renderTable();
-          }
-        }
         applyLocalStateToUI(groupName);
         return;
       }
@@ -775,35 +743,14 @@
       const localState = loadGroupState(groupName);
       const mergedState = { ...localState };
 
-      if (Array.isArray(data)) {
-        data.forEach(row => {
-          const key = localKey(row.student, row.zone, row.task);
-          if (mergedState[key] == null) {
-            mergedState[key] = row.status;
-          }
-        });
-      }
+      data.forEach(row => {
+        const key = localKey(row.student, row.zone, row.task);
+        if (mergedState[key] == null) {
+          mergedState[key] = row.status;
+        }
+      });
 
       saveGroupState(groupName, mergedState);
-
-      // If we do not yet have students / table, build from mergedState
-      if (currentStudents.length === 0) {
-        const studentsSet = new Set();
-        Object.keys(mergedState).forEach(key => {
-          const [student] = key.split("|");
-          if (student) studentsSet.add(student);
-        });
-        if (studentsSet.size > 0) {
-          studentsInput.value = Array.from(studentsSet).join(", ");
-          currentStudents = parseStudents();
-          renderTable();
-        }
-      }
-
-      // If still no table (no marks yet), but we somehow have students
-      if (currentStudents.length > 0 && tableContainer.innerHTML.trim() === "") {
-        renderTable();
-      }
 
       document.querySelectorAll(".status-inner").forEach(node => node.classList.remove("selected"));
       applyLocalStateToUI(groupName);
@@ -869,30 +816,12 @@
       setMessage("CSV exported from local data.");
     }
 
-    // Initialise from URL group if called as index.html?group=...
-    async function initFromURLGroup() {
-      const urlGroup = getQueryParam("group");
-      if (!urlGroup) return false;
-      const groupName = urlGroup.trim();
-      if (!groupName) return false;
-      groupNameInput.value = groupName;
-      registerGroupName(groupName);
-      await loadSavedMarks();
-      return true;
-    }
-
     // Initial layout
-    (async function init() {
-      await refreshGroupSelectOptions();
-      await processQueue();
-
-      const handled = await initFromURLGroup();
-      if (!handled) {
-        currentStudents = parseStudents();
-        renderTable();
-        applyLocalStateToUI(groupNameInput.value.trim());
-      }
-    })();
+    currentStudents = parseStudents();
+    renderTable();
+    refreshGroupSelectOptions();
+    applyLocalStateToUI(groupNameInput.value.trim());
+    processQueue();
   </script>
 </body>
 </html>
