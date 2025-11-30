@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,6 +20,25 @@
       font-size: 0.85rem;
       color: #555;
       margin-bottom: 12px;
+    }
+
+    .controls {
+      margin: 12px 0 16px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 0.9rem;
+    }
+
+    select {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 0.9rem;
     }
 
     button {
@@ -46,224 +66,340 @@
       cursor: default;
     }
 
-    .top-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 16px;
+    #courseStatus {
+      font-size: 0.9rem;
+    }
+
+    #courseStatus.open {
+      color: #1b5e20;
+      font-weight: 600;
+    }
+
+    #courseStatus.closed {
+      color: #c62828;
+      font-weight: 600;
+    }
+
+    #statusMsg {
+      margin-top: 4px;
+      font-size: 0.8rem;
+      color: #444;
+    }
+
+    #statusMsg.error {
+      color: #b00020;
+    }
+
+    #statusMsg.success {
+      color: #1b5e20;
+    }
+
+    #tableContainer {
+      margin-top: 16px;
+      overflow-x: auto;
     }
 
     table {
       border-collapse: collapse;
       width: 100%;
       background: white;
+      min-width: 700px;
     }
 
     th, td {
-      border: 1px solid #ccc;
-      padding: 6px 8px;
-      font-size: 0.9rem;
+      border: 1px solid #999;
+      padding: 6px 4px;
+      font-size: 0.85rem;
       text-align: left;
     }
 
     th {
-      background: #e0e4e8;
+      background: #e0e0e0;
     }
 
-    tr:nth-child(even) td {
-      background: #f7f9fb;
+    .status-inc {
+      background: #ffebee;
     }
 
-    .status-open {
-      color: #1b5e20;
-      font-weight: 600;
+    .status-con {
+      background: #fffde7;
     }
 
-    .status-closed {
-      color: #b00020;
-      font-weight: 600;
+    .status-refi {
+      background: #e8f5e9;
     }
 
-    .message {
-      margin-top: 8px;
-      font-size: 0.8rem;
-      color: #444;
+    .zone-cell {
+      text-align: center;
+      width: 60px;
     }
 
-    .error {
-      color: #b00020;
-    }
-
-    .success {
-      color: #1b5e20;
+    @media (max-width: 900px) {
+      table {
+        font-size: 0.75rem;
+      }
+      th, td {
+        padding: 4px 2px;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Admin – Courses</h1>
+  <h1>Snowboard Assessment – Admin</h1>
   <div class="small">
-    This page lets you see all groups, close or reopen courses, and open the assessment grid
-    for a course to edit marks. Closing a course hides it from the saved groups list on the main page.
+    View results per group, see course status, and close or reopen courses.
+    Status names are expanded: Inc = Inconsistent, Con = Consistent, Refi = Refined.
   </div>
 
-  <div class="top-bar">
-    <button id="refreshBtn">Refresh courses</button>
+  <div class="controls">
+    <label>
+      Group:
+      <select id="groupSelect">
+        <option value="">Select a group</option>
+      </select>
+    </label>
+
+    <button id="loadGroupBtn">Load group data</button>
   </div>
 
-  <div id="statusMsg" class="message"></div>
+  <div class="controls">
+    <span id="courseStatus">Status: –</span>
+    <button id="toggleCourseBtn" class="secondary" disabled>Close course</button>
+  </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Group name</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="coursesBody">
-      <!-- Filled by JS -->
-    </tbody>
-  </table>
+  <div id="statusMsg"></div>
+
+  <div id="tableContainer"></div>
 
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    // Same Supabase project as index.html
     const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
     const SUPABASE_ANON_KEY =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
 
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    const groupSelect = document.getElementById("groupSelect");
+    const loadGroupBtn = document.getElementById("loadGroupBtn");
+    const toggleCourseBtn = document.getElementById("toggleCourseBtn");
+    const courseStatusSpan = document.getElementById("courseStatus");
     const statusMsg = document.getElementById("statusMsg");
-    const coursesBody = document.getElementById("coursesBody");
-    const refreshBtn = document.getElementById("refreshBtn");
+    const tableContainer = document.getElementById("tableContainer");
+
+    let currentGroup = null;
+    let currentIsClosed = false;
 
     function setMessage(text, isError = false) {
       statusMsg.textContent = text;
-      statusMsg.className = "message " + (isError ? "error" : "success");
+      statusMsg.className = isError ? "error" : "success";
     }
 
-    refreshBtn.addEventListener("click", () => {
-      loadCourses();
-    });
+    function clearMessage() {
+      statusMsg.textContent = "";
+      statusMsg.className = "";
+    }
 
-    async function loadCourses() {
-      setMessage("Loading courses...");
-      coursesBody.innerHTML = "";
+    function mapStatusLong(short) {
+      if (short === "Inc") return "Inconsistent (Inc)";
+      if (short === "Con") return "Consistent (Con)";
+      if (short === "Refi") return "Refined (Refi)";
+      return short;
+    }
+
+    function statusClass(short) {
+      if (short === "Inc") return "status-inc";
+      if (short === "Con") return "status-con";
+      if (short === "Refi") return "status-refi";
+      return "";
+    }
+
+    async function loadGroupList() {
+      clearMessage();
 
       try {
-        // 1. Get all group names that have evaluations
-        const { data: evalData, error: evalError } = await supabaseClient
-          .from("evaluations")
-          .select("group_name");
+        const [{ data: evalData, error: evalError }, { data: courseData, error: courseError }] =
+          await Promise.all([
+            supabase.from("evaluations").select("group_name"),
+            supabase.from("courses").select("group_name, is_closed")
+          ]);
 
-        if (evalError) throw evalError;
-
-        const evalGroups = (evalData || [])
-          .map(row => row.group_name)
-          .filter(name => typeof name === "string" && name.trim().length > 0);
-
-        // 2. Get course status from courses table
-        const { data: coursesData, error: coursesError } = await supabaseClient
-          .from("courses")
-          .select("group_name,is_closed");
-
-        if (coursesError) throw coursesError;
-
-        const courseStatusByName = new Map();
-        (coursesData || []).forEach(row => {
-          if (row.group_name) {
-            courseStatusByName.set(row.group_name, !!row.is_closed);
-          }
-        });
-
-        // 3. Merge all group names from evaluations and courses
-        const mergedSet = new Set(evalGroups);
-        (coursesData || []).forEach(row => {
-          if (row.group_name) mergedSet.add(row.group_name);
-        });
-        const mergedList = Array.from(mergedSet).sort((a, b) => a.localeCompare(b));
-
-        if (mergedList.length === 0) {
-          coursesBody.innerHTML = `
-            <tr><td colspan="3">No courses found yet.</td></tr>
-          `;
-          setMessage("No courses found.");
-          return;
+        if (evalError) {
+          console.error(evalError);
+        }
+        if (courseError) {
+          console.error(courseError);
         }
 
-        // 4. Render rows
-        mergedList.forEach(groupName => {
-          const isClosed = courseStatusByName.get(groupName) === true;
-
-          const tr = document.createElement("tr");
-
-          const tdName = document.createElement("td");
-          tdName.textContent = groupName;
-
-          const tdStatus = document.createElement("td");
-          tdStatus.textContent = isClosed ? "Closed" : "Open";
-          tdStatus.className = isClosed ? "status-closed" : "status-open";
-
-          const tdActions = document.createElement("td");
-
-          const toggleBtn = document.createElement("button");
-          toggleBtn.textContent = isClosed ? "Reopen course" : "Close course";
-          toggleBtn.className = isClosed ? "secondary" : "danger";
-          toggleBtn.addEventListener("click", () => {
-            setCourseClosed(groupName, !isClosed);
+        const groupsSet = new Set();
+        if (evalData) {
+          evalData.forEach(row => {
+            if (row.group_name) groupsSet.add(row.group_name);
           });
-
-          const editBtn = document.createElement("button");
-          editBtn.textContent = "Edit marks";
-          editBtn.style.marginLeft = "8px";
-          editBtn.addEventListener("click", () => {
-            openEditorForGroup(groupName);
+        }
+        if (courseData) {
+          courseData.forEach(row => {
+            if (row.group_name) groupsSet.add(row.group_name);
           });
+        }
 
-          tdActions.appendChild(toggleBtn);
-          tdActions.appendChild(editBtn);
+        const closedMap = new Map();
+        if (courseData) {
+          courseData.forEach(row => {
+            closedMap.set(row.group_name, !!row.is_closed);
+          });
+        }
 
-          tr.appendChild(tdName);
-          tr.appendChild(tdStatus);
-          tr.appendChild(tdActions);
+        const groups = Array.from(groupsSet).sort((a, b) => a.localeCompare(b));
 
-          coursesBody.appendChild(tr);
+        while (groupSelect.options.length > 1) {
+          groupSelect.remove(1);
+        }
+
+        groups.forEach(name => {
+          const opt = document.createElement("option");
+          const isClosed = closedMap.get(name);
+          opt.value = name;
+          opt.textContent = isClosed ? name + " (closed)" : name;
+          groupSelect.appendChild(opt);
         });
-
-        setMessage("Courses loaded.");
       } catch (e) {
         console.error(e);
-        setMessage("Failed to load courses: " + (e.message || String(e)), true);
+        setMessage("Could not load group list.", true);
       }
     }
 
-    async function setCourseClosed(groupName, isClosed) {
-      try {
-        setMessage((isClosed ? "Closing" : "Reopening") + " course " + groupName + "...");
-        const { error } = await supabaseClient
-          .from("courses")
-          .upsert({ group_name: groupName, is_closed: isClosed }, { onConflict: "group_name" });
+    async function loadCourseStatus(groupName) {
+      courseStatusSpan.textContent = "Status: loading…";
+      courseStatusSpan.className = "";
 
-        if (error) throw error;
+      const { data, error } = await supabase
+        .from("courses")
+        .select("is_closed")
+        .eq("group_name", groupName)
+        .maybeSingle();
 
-        setMessage("Course " + groupName + " updated.");
-        await loadCourses();
-      } catch (e) {
-        console.error(e);
-        setMessage("Failed to update course: " + (e.message || String(e)), true);
+      if (error && error.code !== "PGRST116") {
+        console.error(error);
+        courseStatusSpan.textContent = "Status: unknown";
+        courseStatusSpan.className = "";
+        toggleCourseBtn.disabled = false;
+        toggleCourseBtn.textContent = "Close course";
+        toggleCourseBtn.className = "secondary";
+        currentIsClosed = false;
+        return;
       }
+
+      const isClosed = data ? !!data.is_closed : false;
+      currentIsClosed = isClosed;
+
+      if (isClosed) {
+        courseStatusSpan.textContent = "Status: Closed";
+        courseStatusSpan.className = "closed";
+        toggleCourseBtn.textContent = "Reopen course";
+        toggleCourseBtn.className = "secondary";
+      } else {
+        courseStatusSpan.textContent = "Status: Open";
+        courseStatusSpan.className = "open";
+        toggleCourseBtn.textContent = "Close course";
+        toggleCourseBtn.className = "danger";
+      }
+      toggleCourseBtn.disabled = false;
     }
 
-    // Opens the main grid with the selected group preloaded
-    function openEditorForGroup(groupName) {
-      const url = "index.html?group=" + encodeURIComponent(groupName);
-      window.open(url, "_blank");
+    async function toggleCourseStatus() {
+      if (!currentGroup) return;
+      clearMessage();
+      toggleCourseBtn.disabled = true;
+      setMessage("Updating course status...");
+
+      const newClosed = !currentIsClosed;
+
+      const { error } = await supabase.from("courses").upsert(
+        [
+          {
+            group_name: currentGroup,
+            is_closed: newClosed
+          }
+        ],
+        { onConflict: "group_name" }
+      );
+
+      if (error) {
+        console.error(error);
+        setMessage("Could not update course status.", true);
+        toggleCourseBtn.disabled = false;
+        return;
+      }
+
+      currentIsClosed = newClosed;
+      await loadCourseStatus(currentGroup);
+      await loadGroupList(); // refresh labels in dropdown
+
+      setMessage(newClosed ? "Course closed." : "Course reopened.");
     }
 
-    // Initial load
-    loadCourses();
+    async function loadGroupData() {
+      const groupName = groupSelect.value;
+      if (!groupName) {
+        setMessage("Select a group first.", true);
+        return;
+      }
+      clearMessage();
+      currentGroup = groupName;
+      tableContainer.innerHTML = "";
+      toggleCourseBtn.disabled = true;
+
+      setMessage("Loading group data...");
+
+      const { data, error } = await supabase
+        .from("evaluations")
+        .select("*")
+        .eq("group_name", groupName)
+        .order("student", { ascending: true })
+        .order("zone", { ascending: true })
+        .order("task", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        setMessage("Could not load evaluations.", true);
+        return;
+      }
+
+      await loadCourseStatus(groupName);
+
+      if (!data || data.length === 0) {
+        tableContainer.innerHTML = "<p>No evaluations found for this group.</p>";
+        setMessage("Loaded, but no data for this group.");
+        return;
+      }
+
+      // Build a table: Student | Zone | Task | Status (long)
+      let html = "<table>";
+      html += "<tr><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th>Status</th></tr>";
+
+      data.forEach(row => {
+        const longStatus = mapStatusLong(row.status);
+        const cls = statusClass(row.status);
+        html += `<tr>
+          <td>${row.student}</td>
+          <td class="zone-cell">Zone ${row.zone}</td>
+          <td>${row.task}</td>
+          <td class="${cls}">${longStatus}</td>
+        </tr>`;
+      });
+
+      html += "</table>";
+      tableContainer.innerHTML = html;
+
+      setMessage("Group data loaded.");
+    }
+
+    loadGroupBtn.addEventListener("click", loadGroupData);
+    toggleCourseBtn.addEventListener("click", toggleCourseStatus);
+
+    loadGroupList();
   </script>
 </body>
 </html>
