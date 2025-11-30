@@ -80,19 +80,21 @@
 
     /* Sticky first column for task names — narrower with wrapping */
     th.task-col,
-    td.task-col {
-      text-align: left;
-      min-width: 110px;
-      max-width: 130px;
-      background: #f9fbfd;
-      position: sticky;
-      left: 0;
-      z-index: 3;
-      white-space: normal;
-      word-break: break-word;
-      padding-left: 4px;
-      padding-right: 4px;
-    }
+td.task-col {
+  text-align: left;
+  min-width: 80px;       /* was 110 */
+  max-width: 95px;       /* was ~130 */
+  background: #f9fbfd;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  white-space: normal;   /* allow wrapping */
+  word-break: break-word;
+  padding-left: 4px;
+  padding-right: 4px;
+  font-size: inherit;    /* keeps the same font size */
+  line-height: 1.1;      /* keeps wrapping tight */
+}
 
     th.zone-header {
       text-align: left;
