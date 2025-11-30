@@ -78,23 +78,23 @@
       font-size: 0.85rem;
     }
 
-    /* Sticky first column for task names — narrower with wrapping */
+    /* Sticky first column for task names – narrower, wrapping, same font size */
     th.task-col,
-td.task-col {
-  text-align: left;
-  min-width: 70px;       /* was 110 */
-  max-width: 85px;       /* was ~130 */
-  background: #f9fbfd;
-  position: sticky;
-  left: 0;
-  z-index: 3;
-  white-space: normal;   /* allow wrapping */
-  word-break: break-word;
-  padding-left: 4px;
-  padding-right: 4px;
-  font-size: inherit;    /* keeps the same font size */
-  line-height: 1.1;      /* keeps wrapping tight */
-}
+    td.task-col {
+      text-align: left;
+      min-width: 80px;
+      max-width: 95px;
+      background: #f9fbfd;
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      white-space: normal;
+      word-break: break-word;
+      padding-left: 4px;
+      padding-right: 4px;
+      font-size: inherit;
+      line-height: 1.1;
+    }
 
     th.zone-header {
       text-align: left;
@@ -193,17 +193,16 @@ td.task-col {
       color: #1b5e20;
     }
 
-    /* Smaller screens: narrower first column and bigger tap targets */
+    /* Smaller screens: keep font size, slightly tighter layout, bigger tap targets */
     @media (max-width: 600px) {
       th.task-col,
       td.task-col {
-        min-width: 95px;
-        max-width: 115px;
-        font-size: 0.72rem;
-        line-height: 1.15;
+        min-width: 70px;
+        max-width: 90px;
+        line-height: 1.1;
       }
       table {
-        font-size: 0.75rem;
+        font-size: 0.85rem;
       }
       th, td {
         padding: 4px 2px;
@@ -356,6 +355,12 @@ td.task-col {
       statusMsg.className = "message " + (isError ? "error" : "success");
     }
 
+    function getQueryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      const value = params.get(name);
+      return value ? value : null;
+    }
+
     // Group list helpers (local)
     function loadGroupList() {
       try {
@@ -469,6 +474,41 @@ td.task-col {
       if (studentsSet.size > 0) {
         studentsInput.value = Array.from(studentsSet).join(", ");
       }
+    }
+
+    // Fetch distinct students for a group from Supabase, fallback to local state
+    async function setStudentsForGroup(groupName) {
+      let students = [];
+
+      if (navigator.onLine) {
+        try {
+          const { data, error } = await supabaseClient
+            .from("evaluations")
+            .select("student")
+            .eq("group_name", groupName);
+
+          if (!error && data) {
+            const set = new Set(
+              data
+                .map(row => row.student)
+                .filter(s => typeof s === "string" && s.trim().length > 0)
+            );
+            students = Array.from(set);
+          } else if (error) {
+            console.error("Could not fetch students for group", error);
+          }
+        } catch (e) {
+          console.error("Error fetching students for group", e);
+        }
+      }
+
+      if (students.length === 0) {
+        setStudentsFromLocalState(groupName);
+      } else {
+        studentsInput.value = students.join(", ");
+      }
+
+      currentStudents = parseStudents();
     }
 
     // Local state helpers
@@ -650,7 +690,7 @@ td.task-col {
                        ${student}
                      </th>`;
           });
-          html += "</tr>";
+          html += "</tr>`;
           lastZone = task.zone;
         }
 
@@ -815,12 +855,39 @@ td.task-col {
       setMessage("CSV exported from local data.");
     }
 
+    // Initialise from URL group if called as index.html?group=...
+    async function initFromURLGroup() {
+      const urlGroup = getQueryParam("group");
+      if (!urlGroup) return false;
+
+      const groupName = urlGroup.trim();
+      if (!groupName) return false;
+
+      groupNameInput.value = groupName;
+      registerGroupName(groupName);
+
+      await setStudentsForGroup(groupName);
+      if (currentStudents.length === 0) {
+        currentStudents = parseStudents();
+      }
+
+      renderTable();
+      await loadSavedMarks();
+      return true;
+    }
+
     // Initial layout
-    currentStudents = parseStudents();
-    renderTable();
-    refreshGroupSelectOptions();
-    applyLocalStateToUI(groupNameInput.value.trim());
-    processQueue();
+    (async function init() {
+      refreshGroupSelectOptions();
+      processQueue();
+
+      const handled = await initFromURLGroup();
+      if (!handled) {
+        currentStudents = parseStudents();
+        renderTable();
+        applyLocalStateToUI(groupNameInput.value.trim());
+      }
+    })();
   </script>
 </body>
 </html>
