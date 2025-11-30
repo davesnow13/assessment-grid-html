@@ -59,8 +59,7 @@
       cursor: default;
     }
 
-    /* Wrapper so we can scroll horizontally on mobile
-       while keeping the first column sticky. */
+    /* Horizontal scroll wrapper */
     #tableContainer {
       overflow-x: auto;
     }
@@ -69,7 +68,7 @@
       border-collapse: collapse;
       width: 100%;
       background: white;
-      min-width: 700px; /* ensures horizontal scroll when needed */
+      min-width: 700px;
     }
 
     th, td {
@@ -79,7 +78,7 @@
       font-size: 0.85rem;
     }
 
-    /* First column: task names – make it sticky */
+    /* Sticky first column for task names */
     th.task-col,
     td.task-col {
       text-align: left;
@@ -91,7 +90,6 @@
     }
 
     th.zone-header {
-      background: #e6eef7;
       text-align: left;
       font-size: 0.95rem;
     }
@@ -104,7 +102,20 @@
       font-size: 0.75rem;
     }
 
-    /* Base status cell, neutral by default */
+    /* Zone row background colors */
+    .zone-row-1 th {
+      background: #e3f2fd; /* light blue */
+    }
+
+    .zone-row-2 th {
+      background: #e8f5e9; /* light green */
+    }
+
+    .zone-row-3 th {
+      background: #fff3e0; /* light orange */
+    }
+
+    /* Base status cell */
     .status-cell {
       background: #f5f5f5;
     }
@@ -175,7 +186,7 @@
       color: #1b5e20;
     }
 
-    /* Smaller screens: shrink text, but enlarge tap targets a bit */
+    /* Smaller screens: slightly bigger tap targets */
     @media (max-width: 900px) {
       table {
         font-size: 0.75rem;
@@ -189,7 +200,7 @@
       }
     }
 
-    /* Touch devices (coarse pointer): even bigger squares for gloves */
+    /* Touch / glove-friendly */
     @media (pointer: coarse) {
       .status-inner {
         width: 30px;
@@ -242,7 +253,6 @@
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Supabase configuration that works for you now
     const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
     const SUPABASE_ANON_KEY =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
@@ -281,10 +291,9 @@
 
     let currentStudents = [];
 
-    // Local storage keys
-    const LOCAL_STATE_PREFIX = "assessmentGrid_state_";   // per group
-    const LOCAL_QUEUE_KEY = "assessmentGrid_queue_v1";    // offline sync queue
-    const LOCAL_GROUPS_KEY = "assessmentGrid_groups";     // list of known groups
+    const LOCAL_STATE_PREFIX = "assessmentGrid_state_";
+    const LOCAL_QUEUE_KEY = "assessmentGrid_queue_v1";
+    const LOCAL_GROUPS_KEY = "assessmentGrid_groups";
 
     document.getElementById("applyLayoutBtn").addEventListener("click", () => {
       currentStudents = parseStudents();
@@ -309,11 +318,8 @@
         setMessage("Select a saved group first.", true);
         return;
       }
-
       groupNameInput.value = selectedGroup;
-
       setStudentsFromLocalState(selectedGroup);
-
       currentStudents = parseStudents();
       renderTable();
       loadSavedMarks();
@@ -336,8 +342,7 @@
       statusMsg.className = "message " + (isError ? "error" : "success");
     }
 
-    // ---------- Group list helpers ----------
-
+    // Group list helpers
     function loadGroupList() {
       try {
         const raw = localStorage.getItem(LOCAL_GROUPS_KEY);
@@ -350,9 +355,7 @@
     function saveGroupList(list) {
       try {
         localStorage.setItem(LOCAL_GROUPS_KEY, JSON.stringify(list));
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
 
     function registerGroupName(groupName) {
@@ -390,8 +393,7 @@
       }
     }
 
-    // ---------- Local state helpers ----------
-
+    // Local state helpers
     function localKey(student, zone, task) {
       return `${student}|${zone}|${task}`;
     }
@@ -410,9 +412,7 @@
       if (!groupName) return;
       try {
         localStorage.setItem(LOCAL_STATE_PREFIX + groupName, JSON.stringify(state));
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
 
     function updateLocalState(groupName, student, zone, task, status) {
@@ -441,8 +441,7 @@
       });
     }
 
-    // ---------- Queue helpers ----------
-
+    // Queue helpers
     function loadQueue() {
       try {
         const raw = localStorage.getItem(LOCAL_QUEUE_KEY);
@@ -455,9 +454,7 @@
     function saveQueue(queue) {
       try {
         localStorage.setItem(LOCAL_QUEUE_KEY, JSON.stringify(queue));
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
 
     function enqueueOp(op) {
@@ -531,8 +528,7 @@
 
     window.addEventListener("online", processQueue);
 
-    // ---------- Table rendering ----------
-
+    // Table rendering
     function renderTable() {
       const groupName = groupNameInput.value.trim();
 
@@ -548,12 +544,14 @@
 
       let html = "<table>";
 
+      // Top header: task + students
       html += "<tr><th class='task-col'>Task</th>";
       currentStudents.forEach(student => {
         html += `<th class="student-group-header" colspan="${STATUSES.length}">${student}</th>`;
       });
       html += "</tr>";
 
+      // Status header row
       html += "<tr><th class='task-col'></th>";
       currentStudents.forEach(() => {
         STATUSES.forEach(status => {
@@ -566,12 +564,19 @@
 
       TASKS.forEach(task => {
         if (task.zone !== lastZone) {
-          html += `<tr><th class="zone-header task-col" colspan="${1 + currentStudents.length * STATUSES.length}">
-                     Zone ${task.zone}
-                   </th></tr>`;
+          // Zone row with repeated student names
+          html += `<tr class="zone-row zone-row-${task.zone}">`;
+          html += `<th class="zone-header task-col">Zone ${task.zone}</th>`;
+          currentStudents.forEach(student => {
+            html += `<th class="zone-header student-group-header" colspan="${STATUSES.length}">
+                       ${student}
+                     </th>`;
+          });
+          html += "</tr>";
           lastZone = task.zone;
         }
 
+        // Task row
         html += `<tr><td class="task-col">${task.label}</td>`;
 
         currentStudents.forEach(student => {
@@ -675,8 +680,7 @@
       setMessage("Loaded. Local marks kept where present.");
     }
 
-    // ---------- CSV export from localStorage ----------
-
+    // CSV export
     function exportCurrentGroupToCSV() {
       const groupName = groupNameInput.value.trim();
       if (!groupName) {
