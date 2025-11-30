@@ -368,31 +368,78 @@
       }
     }
 
-    // NEW: fetch distinct group names from Supabase and merge with local
+    // Fetch group names from Supabase and local storage,
+    // but hide groups that are closed in the "courses" table.
     async function refreshGroupSelectOptions() {
-      const localList = loadGroupList();
+      const localGroups = loadGroupList();
 
-      let cloudGroups = [];
+      let evalGroups = [];
+      let courseRows = [];
+
       if (navigator.onLine) {
         try {
-          const { data, error } = await supabaseClient
+          // All group names that have any evaluations
+          const { data: evalData, error: evalError } = await supabaseClient
             .from("evaluations")
             .select("group_name");
-          if (!error && data) {
-            cloudGroups = data
+          if (!evalError && evalData) {
+            evalGroups = evalData
               .map(row => row.group_name)
               .filter(name => typeof name === "string" && name.trim().length > 0);
+          } else if (evalError) {
+            console.error("Could not fetch evaluation group names", evalError);
+          }
+
+          // Course status (open / closed)
+          const { data: courseData, error: courseError } = await supabaseClient
+            .from("courses")
+            .select("group_name,is_closed");
+          if (!courseError && courseData) {
+            courseRows = courseData;
+          } else if (courseError) {
+            console.error("Could not fetch courses", courseError);
           }
         } catch (e) {
-          console.error("Could not fetch cloud group names", e);
+          console.error("Error fetching group names from Supabase", e);
         }
       }
 
-      // Merge and deduplicate
-      const mergedSet = new Set([...localList, ...cloudGroups]);
+      // Sets of closed and open course names from courses table
+      const closedGroups = new Set(
+        courseRows
+          .filter(row => row.is_closed)
+          .map(row => row.group_name)
+      );
+
+      const openCourses = courseRows
+        .filter(row => !row.is_closed)
+        .map(row => row.group_name);
+
+      // Cloud groups that are considered open:
+      //  - any group from evaluations that is not closed
+      //  - plus any group from courses that is marked open
+      const openCloudGroupsSet = new Set();
+      evalGroups.forEach(name => {
+        if (!closedGroups.has(name)) {
+          openCloudGroupsSet.add(name);
+        }
+      });
+      openCourses.forEach(name => openCloudGroupsSet.add(name));
+
+      // Merge locals, excluding closed ones
+      const mergedSet = new Set();
+
+      localGroups.forEach(name => {
+        if (!closedGroups.has(name)) {
+          mergedSet.add(name);
+        }
+      });
+
+      openCloudGroupsSet.forEach(name => mergedSet.add(name));
+
       const mergedList = Array.from(mergedSet).sort((a, b) => a.localeCompare(b));
 
-      // Optionally update local storage with the merged list, so future offline use sees everything seen once
+      // Keep merged list locally, so offline use still sees everything once seen
       saveGroupList(mergedList);
 
       // Rebuild dropdown
