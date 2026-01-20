@@ -80,17 +80,18 @@
     }
 
     #statusMsg {
-      margin-top: 4px;
-      font-size: 0.8rem;
-      color: #444;
+      margin-top: 6px;
+      font-size: 0.9rem;
     }
 
     #statusMsg.error {
       color: #b00020;
+      font-weight: 600;
     }
 
     #statusMsg.success {
       color: #1b5e20;
+      font-weight: 600;
     }
 
     #summaryContainer {
@@ -190,6 +191,7 @@
     }
   </style>
 </head>
+
 <body>
   <h1>Snowboard Assessment - Admin</h1>
   <div class="small">
@@ -231,11 +233,12 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Supabase configuration (same project as index.html)
+    // Supabase configuration
     const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
     const SUPABASE_ANON_KEY =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
 
+    // IMPORTANT: do not name this variable "supabase" (Safari global conflict)
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const groupSelect = document.getElementById("groupSelect");
@@ -278,21 +281,18 @@
       return "";
     }
 
-    // Updated: shows errors on-screen (not just console), and warns when 0 groups returned
     async function loadGroupList() {
       clearMessage();
-
-      if (!navigator.onLine) {
-        setMessage("Offline: cannot load group list from cloud.", true);
-        return;
-      }
+      setMessage("Loading groups...");
 
       try {
-        const [{ data: evalData, error: evalError }, { data: courseData, error: courseError }] =
-          await Promise.all([
-            supabase.from("evaluations").select("group_name"),
-            supabase.from("courses").select("group_name, is_closed")
-          ]);
+        const [
+          { data: evalData, error: evalError },
+          { data: courseData, error: courseError }
+        ] = await Promise.all([
+          supabaseClient.from("evaluations").select("group_name"),
+          supabaseClient.from("courses").select("group_name, is_closed")
+        ]);
 
         if (evalError) {
           console.error("evaluations list error:", evalError);
@@ -305,19 +305,21 @@
         }
 
         const groupsSet = new Set();
-        if (evalData) {
+
+        if (Array.isArray(evalData)) {
           evalData.forEach(row => {
-            if (row.group_name) groupsSet.add(row.group_name);
+            if (row && row.group_name) groupsSet.add(row.group_name);
           });
         }
-        if (courseData) {
+
+        if (Array.isArray(courseData)) {
           courseData.forEach(row => {
-            if (row.group_name) groupsSet.add(row.group_name);
+            if (row && row.group_name) groupsSet.add(row.group_name);
           });
         }
 
         const closedMap = new Map();
-        if (courseData) {
+        if (Array.isArray(courseData)) {
           courseData.forEach(row => {
             closedMap.set(row.group_name, !!row.is_closed);
           });
@@ -331,7 +333,7 @@
 
         if (groups.length === 0) {
           setMessage(
-            "No groups returned. If you know groups exist, this is usually an RLS/policy issue on courses SELECT.",
+            "No groups returned from Supabase. This is usually an RLS policy issue on SELECT for courses and/or evaluations.",
             true
           );
           return;
@@ -356,13 +358,12 @@
       courseStatusSpan.textContent = "Status: loading...";
       courseStatusSpan.className = "";
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from("courses")
         .select("is_closed")
         .eq("group_name", groupName)
         .maybeSingle();
 
-      // PGRST116 = "Results contain 0 rows" for maybeSingle
       if (error && error.code !== "PGRST116") {
         console.error(error);
         courseStatusSpan.textContent = "Status: unknown";
@@ -383,6 +384,7 @@
         toggleCourseBtn.textContent = "Reopen course";
         toggleCourseBtn.className = "secondary";
       } else {
+        courseStatusSpan.textcontent = "Status: Open";
         courseStatusSpan.textContent = "Status: Open";
         courseStatusSpan.className = "open";
         toggleCourseBtn.textContent = "Close course";
@@ -393,18 +395,13 @@
 
     async function toggleCourseStatus() {
       if (!currentGroup) return;
-      if (!navigator.onLine) {
-        setMessage("Offline: cannot update course status.", true);
-        return;
-      }
-
       clearMessage();
       toggleCourseBtn.disabled = true;
       setMessage("Updating course status...");
 
       const newClosed = !currentIsClosed;
 
-      const { error } = await supabase.from("courses").upsert(
+      const { error } = await supabaseClient.from("courses").upsert(
         [
           {
             group_name: currentGroup,
@@ -423,7 +420,7 @@
 
       currentIsClosed = newClosed;
       await loadCourseStatus(currentGroup);
-      await loadGroupList(); // refresh labels
+      await loadGroupList();
 
       setMessage(newClosed ? "Course closed." : "Course reopened.");
     }
@@ -457,14 +454,12 @@
       const zoneSummaries = [];
       let overallPass = true;
 
-      Array.from(zoneMap.keys())
-        .sort((a, b) => a - b)
-        .forEach(zone => {
-          const c = zoneMap.get(zone);
-          const zonePass = c.Inc === 0 && (c.Con > 0 || c.Refi > 0);
-          if (!zonePass) overallPass = false;
-          zoneSummaries.push({ zone, counts: c, pass: zonePass });
-        });
+      Array.from(zoneMap.keys()).sort((a, b) => a - b).forEach(zone => {
+        const c = zoneMap.get(zone);
+        const zonePass = c.Inc === 0 && (c.Con > 0 || c.Refi > 0);
+        if (!zonePass) overallPass = false;
+        zoneSummaries.push({ zone, counts: c, pass: zonePass });
+      });
 
       const card = document.createElement("div");
       card.className = "summary-card";
@@ -486,7 +481,8 @@
 
       const lineRule = document.createElement("div");
       lineRule.className = "summary-line";
-      lineRule.innerHTML = 'To pass, the participant must have minimum <strong>Consistent</strong> in all zones.';
+      lineRule.innerHTML =
+        'To pass, the participant must have minimum <strong>Consistent</strong> in all zones.';
       card.appendChild(lineRule);
 
       const lineOverall = document.createElement("div");
@@ -501,16 +497,11 @@
         l.className = "summary-line";
         const statusText = zs.pass ? "Pass" : "Not yet";
         l.textContent =
-          "Zone " +
-          zs.zone +
-          ": Inc " +
-          zs.counts.Inc +
-          ", Con " +
-          zs.counts.Con +
-          ", Refi " +
-          zs.counts.Refi +
-          " - " +
-          statusText;
+          "Zone " + zs.zone +
+          ": Inc " + zs.counts.Inc +
+          ", Con " + zs.counts.Con +
+          ", Refi " + zs.counts.Refi +
+          " - " + statusText;
         card.appendChild(l);
       });
 
@@ -550,10 +541,6 @@
         setMessage("Select a group first.", true);
         return;
       }
-      if (!navigator.onLine) {
-        setMessage("Offline: cannot load group data from cloud.", true);
-        return;
-      }
 
       clearMessage();
       currentGroup = groupName;
@@ -569,7 +556,7 @@
 
       setMessage("Loading group data...");
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from("evaluations")
         .select("*")
         .eq("group_name", groupName)
@@ -646,9 +633,7 @@
           let val = rowObj[h];
           if (val == null) val = "";
           val = String(val).replace(/"/g, '""');
-          if (val.search(/[",\n]/) !== -1) {
-            val = '"' + val + '"';
-          }
+          if (val.search(/[",\n]/) !== -1) val = '"' + val + '"';
           return val;
         });
 
@@ -684,9 +669,8 @@
     exportCsvBtn.addEventListener("click", exportCsv);
     printBtn.addEventListener("click", printCurrent);
 
-    // Refresh group list on load and when coming back online
+    // Load groups immediately
     loadGroupList();
-    window.addEventListener("online", loadGroupList);
   </script>
 </body>
 </html>
