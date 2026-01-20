@@ -80,18 +80,17 @@
     }
 
     #statusMsg {
-      margin-top: 6px;
-      font-size: 0.9rem;
+      margin-top: 4px;
+      font-size: 0.8rem;
+      color: #444;
     }
 
     #statusMsg.error {
       color: #b00020;
-      font-weight: 600;
     }
 
     #statusMsg.success {
       color: #1b5e20;
-      font-weight: 600;
     }
 
     #summaryContainer {
@@ -137,6 +136,7 @@
       width: 100%;
       background: white;
       min-width: 700px;
+      table-layout: auto;
     }
 
     th, td {
@@ -144,6 +144,9 @@
       padding: 6px 4px;
       font-size: 0.85rem;
       text-align: left;
+      vertical-align: top;
+      white-space: normal;
+      word-break: break-word;
     }
 
     th {
@@ -164,7 +167,13 @@
 
     .zone-cell {
       text-align: center;
-      width: 60px;
+      width: 80px;
+      white-space: nowrap;
+    }
+
+    .status-col {
+      min-width: 120px;
+      white-space: normal;
     }
 
     @media (max-width: 900px) {
@@ -176,22 +185,86 @@
       }
     }
 
+    /* Print support */
+    #printAllContainer {
+      display: none;
+    }
+
+    .print-page {
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .print-page:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+
     @media print {
-      .controls,
-      #statusMsg {
-        display: none !important;
-      }
       body {
         background: white;
+        padding: 0;
       }
+
+      /* Hide normal UI during print */
+      .controls,
+      #statusMsg,
       #summaryContainer,
       #tableContainer {
-        margin-top: 0;
+        display: none !important;
+      }
+
+      /* When printing all, show the print container */
+      body.printing-all #printAllContainer {
+        display: block !important;
+      }
+
+      /* When printing single student view, show the normal content instead */
+      body:not(.printing-all) #summaryContainer,
+      body:not(.printing-all) #tableContainer {
+        display: block !important;
+      }
+
+      /* Improve print table layout */
+      table {
+        width: 100% !important;
+        min-width: 0 !important;
+        table-layout: auto !important;
+      }
+
+      th, td {
+        font-size: 11pt;
+        padding: 6px 6px;
+        white-space: normal !important;
+        word-break: break-word !important;
+      }
+
+      .zone-cell {
+        width: 90px !important;
+        white-space: nowrap !important;
+      }
+
+      .status-col {
+        min-width: 140px !important;
+      }
+
+      /* Keep header rows with table */
+      thead {
+        display: table-header-group;
+      }
+
+      tfoot {
+        display: table-footer-group;
+      }
+
+      /* Avoid splitting summary cards awkwardly */
+      .summary-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
       }
     }
   </style>
 </head>
-
 <body>
   <h1>Snowboard Assessment - Admin</h1>
   <div class="small">
@@ -219,6 +292,7 @@
 
     <button id="exportCsvBtn" class="secondary" disabled>Export CSV (group)</button>
     <button id="printBtn" class="secondary" disabled>Print / PDF current student</button>
+    <button id="printAllBtn" class="secondary" disabled>Print / PDF all students</button>
   </div>
 
   <div class="controls">
@@ -231,6 +305,10 @@
   <div id="summaryContainer"></div>
   <div id="tableContainer"></div>
 
+  <!-- Print-only container for "all students" -->
+  <div id="printAllContainer"></div>
+
+  <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // Supabase configuration
@@ -238,7 +316,6 @@
     const SUPABASE_ANON_KEY =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
 
-    // IMPORTANT: do not name this variable "supabase" (Safari global conflict)
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const groupSelect = document.getElementById("groupSelect");
@@ -251,6 +328,8 @@
     const studentSelect = document.getElementById("studentSelect");
     const exportCsvBtn = document.getElementById("exportCsvBtn");
     const printBtn = document.getElementById("printBtn");
+    const printAllBtn = document.getElementById("printAllBtn");
+    const printAllContainer = document.getElementById("printAllContainer");
 
     let currentGroup = null;
     let currentIsClosed = false;
@@ -283,60 +362,40 @@
 
     async function loadGroupList() {
       clearMessage();
-      setMessage("Loading groups...");
 
       try {
-        const [
-          { data: evalData, error: evalError },
-          { data: courseData, error: courseError }
-        ] = await Promise.all([
-          supabaseClient.from("evaluations").select("group_name"),
-          supabaseClient.from("courses").select("group_name, is_closed")
-        ]);
+        const [{ data: evalData, error: evalError }, { data: courseData, error: courseError }] =
+          await Promise.all([
+            supabaseClient.from("evaluations").select("group_name"),
+            supabaseClient.from("courses").select("group_name, is_closed")
+          ]);
 
-        if (evalError) {
-          console.error("evaluations list error:", evalError);
-          setMessage("Error reading evaluations: " + (evalError.message || "unknown error"), true);
-        }
-
-        if (courseError) {
-          console.error("courses list error:", courseError);
-          setMessage("Error reading courses: " + (courseError.message || "unknown error"), true);
-        }
+        if (evalError) console.error(evalError);
+        if (courseError) console.error(courseError);
 
         const groupsSet = new Set();
-
-        if (Array.isArray(evalData)) {
+        if (evalData) {
           evalData.forEach(row => {
-            if (row && row.group_name) groupsSet.add(row.group_name);
+            if (row.group_name) groupsSet.add(row.group_name);
           });
         }
-
-        if (Array.isArray(courseData)) {
+        if (courseData) {
           courseData.forEach(row => {
-            if (row && row.group_name) groupsSet.add(row.group_name);
+            if (row.group_name) groupsSet.add(row.group_name);
           });
         }
 
         const closedMap = new Map();
-        if (Array.isArray(courseData)) {
+        if (courseData) {
           courseData.forEach(row => {
             closedMap.set(row.group_name, !!row.is_closed);
           });
         }
 
-        const groups = Array.from(groupsSet).filter(Boolean).sort((a, b) => a.localeCompare(b));
+        const groups = Array.from(groupsSet).sort((a, b) => a.localeCompare(b));
 
         while (groupSelect.options.length > 1) {
           groupSelect.remove(1);
-        }
-
-        if (groups.length === 0) {
-          setMessage(
-            "No groups returned from Supabase. This is usually an RLS policy issue on SELECT for courses and/or evaluations.",
-            true
-          );
-          return;
         }
 
         groups.forEach(name => {
@@ -346,11 +405,9 @@
           opt.textContent = isClosed ? name + " (closed)" : name;
           groupSelect.appendChild(opt);
         });
-
-        setMessage("Loaded " + groups.length + " group(s).");
       } catch (e) {
-        console.error("loadGroupList exception:", e);
-        setMessage("Could not load group list: " + (e.message || String(e)), true);
+        console.error(e);
+        setMessage("Could not load group list.", true);
       }
     }
 
@@ -384,7 +441,6 @@
         toggleCourseBtn.textContent = "Reopen course";
         toggleCourseBtn.className = "secondary";
       } else {
-        courseStatusSpan.textcontent = "Status: Open";
         courseStatusSpan.textContent = "Status: Open";
         courseStatusSpan.className = "open";
         toggleCourseBtn.textContent = "Close course";
@@ -413,7 +469,7 @@
 
       if (error) {
         console.error(error);
-        setMessage("Could not update course status: " + (error.message || "unknown error"), true);
+        setMessage("Could not update course status.", true);
         toggleCourseBtn.disabled = false;
         return;
       }
@@ -430,17 +486,7 @@
       return currentData.filter(row => row.student === currentStudentFilter);
     }
 
-    function renderSummary() {
-      summaryContainer.innerHTML = "";
-
-      if (currentStudentFilter === "ALL") return;
-
-      const rows = currentData.filter(row => row.student === currentStudentFilter);
-      if (rows.length === 0) return;
-
-      const groupName = rows[0].group_name;
-      const student = rows[0].student;
-
+    function buildZoneSummary(rows) {
       const zoneMap = new Map();
       rows.forEach(row => {
         const z = row.zone;
@@ -454,12 +500,30 @@
       const zoneSummaries = [];
       let overallPass = true;
 
-      Array.from(zoneMap.keys()).sort((a, b) => a - b).forEach(zone => {
-        const c = zoneMap.get(zone);
-        const zonePass = c.Inc === 0 && (c.Con > 0 || c.Refi > 0);
-        if (!zonePass) overallPass = false;
-        zoneSummaries.push({ zone, counts: c, pass: zonePass });
-      });
+      Array.from(zoneMap.keys())
+        .sort((a, b) => a - b)
+        .forEach(zone => {
+          const c = zoneMap.get(zone);
+          const zonePass = c.Inc === 0 && (c.Con > 0 || c.Refi > 0);
+          if (!zonePass) overallPass = false;
+          zoneSummaries.push({ zone, counts: c, pass: zonePass });
+        });
+
+      return { zoneSummaries, overallPass };
+    }
+
+    function renderSummary() {
+      summaryContainer.innerHTML = "";
+
+      if (currentStudentFilter === "ALL") return;
+
+      const rows = currentData.filter(row => row.student === currentStudentFilter);
+      if (rows.length === 0) return;
+
+      const groupName = rows[0].group_name;
+      const student = rows[0].student;
+
+      const { zoneSummaries, overallPass } = buildZoneSummary(rows);
 
       const card = document.createElement("div");
       card.className = "summary-card";
@@ -481,8 +545,7 @@
 
       const lineRule = document.createElement("div");
       lineRule.className = "summary-line";
-      lineRule.innerHTML =
-        'To pass, the participant must have minimum <strong>Consistent</strong> in all zones.';
+      lineRule.innerHTML = 'To pass, the participant must have minimum <strong>Consistent</strong> in all zones.';
       card.appendChild(lineRule);
 
       const lineOverall = document.createElement("div");
@@ -497,11 +560,16 @@
         l.className = "summary-line";
         const statusText = zs.pass ? "Pass" : "Not yet";
         l.textContent =
-          "Zone " + zs.zone +
-          ": Inc " + zs.counts.Inc +
-          ", Con " + zs.counts.Con +
-          ", Refi " + zs.counts.Refi +
-          " - " + statusText;
+          "Zone " +
+          zs.zone +
+          ": Inc " +
+          zs.counts.Inc +
+          ", Con " +
+          zs.counts.Con +
+          ", Refi " +
+          zs.counts.Refi +
+          " - " +
+          statusText;
         card.appendChild(l);
       });
 
@@ -517,7 +585,8 @@
       }
 
       let html = "<table>";
-      html += "<tr><th>Group</th><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th>Status</th></tr>";
+      html += "<thead><tr><th>Group</th><th>Student</th><th class='zone-cell'>Zone</th><th>Task</th><th class='status-col'>Status</th></tr></thead>";
+      html += "<tbody>";
 
       rows.forEach(row => {
         const longStatus = mapStatusLong(row.status);
@@ -527,11 +596,11 @@
           <td>${row.student}</td>
           <td class="zone-cell">Zone ${row.zone}</td>
           <td>${row.task}</td>
-          <td class="${cls}">${longStatus}</td>
+          <td class="status-col ${cls}">${longStatus}</td>
         </tr>`;
       });
 
-      html += "</table>";
+      html += "</tbody></table>";
       tableContainer.innerHTML = html;
     }
 
@@ -544,12 +613,15 @@
 
       clearMessage();
       currentGroup = groupName;
+
       tableContainer.innerHTML = "";
       summaryContainer.innerHTML = "";
       toggleCourseBtn.disabled = true;
       studentSelect.disabled = true;
       exportCsvBtn.disabled = true;
       printBtn.disabled = true;
+      printAllBtn.disabled = true;
+
       studentSelect.innerHTML = '<option value="ALL">All students</option>';
       currentStudentFilter = "ALL";
       currentData = [];
@@ -566,7 +638,7 @@
 
       if (error) {
         console.error(error);
-        setMessage("Could not load evaluations: " + (error.message || "unknown error"), true);
+        setMessage("Could not load evaluations.", true);
         return;
       }
 
@@ -596,6 +668,7 @@
       studentSelect.disabled = false;
       exportCsvBtn.disabled = false;
       printBtn.disabled = (studentSelect.value === "ALL");
+      printAllBtn.disabled = false;
 
       renderSummary();
       renderTable();
@@ -663,13 +736,124 @@
       window.print();
     }
 
+    function buildPrintAllHtmlForGroup() {
+      // Build one page per student
+      const studentsSet = new Set();
+      currentData.forEach(r => { if (r.student) studentsSet.add(r.student); });
+      const students = Array.from(studentsSet).sort((a, b) => a.localeCompare(b));
+
+      const pages = [];
+
+      students.forEach(studentName => {
+        const rows = currentData.filter(r => r.student === studentName);
+        if (rows.length === 0) return;
+
+        const groupName = rows[0].group_name;
+        const { zoneSummaries, overallPass } = buildZoneSummary(rows);
+
+        let summaryHtml = `
+          <div class="summary-card">
+            <div class="summary-title">Participant summary</div>
+            <div class="summary-line">Group: <strong>${groupName}</strong></div>
+            <div class="summary-line">Student: <strong>${studentName}</strong></div>
+            <div class="summary-line">To pass, the participant must have minimum <strong>Consistent</strong> in all zones.</div>
+            <div class="summary-line ${overallPass ? "summary-pass" : "summary-fail"}">
+              ${overallPass
+                ? "Overall result: PASSED. Participant has at least Consistent in all zones."
+                : "Overall result: NOT YET. Participant needs at least Consistent in all zones."}
+            </div>
+        `;
+
+        zoneSummaries.forEach(zs => {
+          const statusText = zs.pass ? "Pass" : "Not yet";
+          summaryHtml += `
+            <div class="summary-line">
+              Zone ${zs.zone}: Inc ${zs.counts.Inc}, Con ${zs.counts.Con}, Refi ${zs.counts.Refi} - ${statusText}
+            </div>
+          `;
+        });
+
+        summaryHtml += `</div>`;
+
+        let tableHtml = `
+          <table>
+            <thead>
+              <tr>
+                <th>Group</th>
+                <th>Student</th>
+                <th class="zone-cell">Zone</th>
+                <th>Task</th>
+                <th class="status-col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        rows.forEach(row => {
+          const longStatus = mapStatusLong(row.status);
+          const cls = statusClass(row.status);
+          tableHtml += `
+            <tr>
+              <td>${row.group_name}</td>
+              <td>${row.student}</td>
+              <td class="zone-cell">Zone ${row.zone}</td>
+              <td>${row.task}</td>
+              <td class="status-col ${cls}">${longStatus}</td>
+            </tr>
+          `;
+        });
+
+        tableHtml += `</tbody></table>`;
+
+        pages.push(`
+          <div class="print-page">
+            <h1>Snowboard Assessment - Admin</h1>
+            <div class="small">
+              View results per group, filter by participant, close or reopen courses, and export.
+              Status names use the long form: Inconsistent, Consistent, Refined.
+              To pass, a participant must have at least Consistent in every zone (no Inconsistent in any zone).
+            </div>
+            ${summaryHtml}
+            ${tableHtml}
+          </div>
+        `);
+      });
+
+      return pages.join("");
+    }
+
+    function printAllStudents() {
+      if (!currentGroup || currentData.length === 0) {
+        setMessage("Load a group with data before printing.", true);
+        return;
+      }
+
+      clearMessage();
+      setMessage("Preparing all-students print...");
+
+      printAllContainer.innerHTML = buildPrintAllHtmlForGroup();
+
+      document.body.classList.add("printing-all");
+
+      // Cleanup after printing
+      const cleanup = () => {
+        document.body.classList.remove("printing-all");
+        printAllContainer.innerHTML = "";
+        window.removeEventListener("afterprint", cleanup);
+      };
+
+      window.addEventListener("afterprint", cleanup);
+
+      window.print();
+    }
+
     loadGroupBtn.addEventListener("click", loadGroupData);
     toggleCourseBtn.addEventListener("click", toggleCourseStatus);
     studentSelect.addEventListener("change", onStudentChange);
     exportCsvBtn.addEventListener("click", exportCsv);
     printBtn.addEventListener("click", printCurrent);
+    printAllBtn.addEventListener("click", printAllStudents);
 
-    // Load groups immediately
     loadGroupList();
   </script>
 </body>
