@@ -13,13 +13,10 @@
 
     h1 { margin-bottom: 4px; }
 
-    .small {
-      font-size: 0.85rem;
-      color: #555;
-    }
+    .small { font-size: 0.85rem; color: #555; }
 
     .controls {
-      margin: 12px 0 20px 0;
+      margin: 12px 0 14px 0;
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
@@ -29,20 +26,21 @@
     label { font-size: 0.9rem; }
 
     input[type="text"], select {
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      font-size: 0.9rem;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #c9d1d9;
+      font-size: 0.95rem;
+      background: #fff;
     }
 
     button {
-      padding: 6px 10px;
-      border-radius: 4px;
+      padding: 8px 12px;
+      border-radius: 6px;
       border: 1px solid #0b6b2f;
       background: #0f9d3d;
       color: white;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
     }
 
     button.secondary {
@@ -50,16 +48,13 @@
       border-color: #4a5056;
     }
 
-    button:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
+    button:disabled { opacity: 0.6; cursor: default; }
 
     /* Connection status banner */
     #connectionStatus {
       margin: 10px 0 10px 0;
-      padding: 8px 10px;
-      border-radius: 6px;
+      padding: 10px 12px;
+      border-radius: 8px;
       border: 1px solid #c9d1d9;
       background: #ffffff;
       font-size: 0.9rem;
@@ -103,10 +98,9 @@
     #connectionStatus.offline .dot { background: #616161; }
     #connectionStatus.offline { border-color: #d0d0d0; background: #f6f6f6; }
 
-    /* Horizontal scroll wrapper */
     #tableContainer {
       overflow-x: auto;
-      -webkit-overflow-scrolling: touch; /* IMPORTANT for iOS */
+      -webkit-overflow-scrolling: touch;
     }
 
     table {
@@ -123,7 +117,6 @@
       font-size: 0.85rem;
     }
 
-    /* Sticky first column for task names */
     th.task-col,
     td.task-col {
       text-align: left;
@@ -137,24 +130,13 @@
       word-break: break-word;
       padding-left: 4px;
       padding-right: 4px;
-      font-size: inherit;
       line-height: 1.1;
     }
 
-    th.zone-header {
-      text-align: left;
-      font-size: 0.95rem;
-    }
+    th.zone-header { text-align: left; font-size: 0.95rem; }
+    th.student-group-header { background: #d9dde0; }
+    th.status-header { font-size: 0.75rem; }
 
-    th.student-group-header {
-      background: #d9dde0;
-    }
-
-    th.status-header {
-      font-size: 0.75rem;
-    }
-
-    /* Zone row background colors */
     .zone-row-1 th { background: #e3f2fd; }
     .zone-row-2 th { background: #e8f5e9; }
     .zone-row-3 th { background: #fff3e0; }
@@ -180,45 +162,24 @@
       font-size: 0.8rem;
     }
 
-    /* Inc = red */
     .status-header[data-status="Inc"],
     .status-cell[data-status="Inc"] { background: #ffebee; }
+    .status-inner[data-status="Inc"].selected { background: #c62828; border-color: #8e0000; }
 
-    .status-inner[data-status="Inc"].selected {
-      background: #c62828;
-      border-color: #8e0000;
-    }
-
-    /* Con = yellow */
     .status-header[data-status="Con"],
     .status-cell[data-status="Con"] { background: #fffde7; }
+    .status-inner[data-status="Con"].selected { background: #f9a825; border-color: #c17900; }
 
-    .status-inner[data-status="Con"].selected {
-      background: #f9a825;
-      border-color: #c17900;
-    }
-
-    /* Refi = green */
     .status-header[data-status="Refi"],
     .status-cell[data-status="Refi"] { background: #e8f5e9; }
+    .status-inner[data-status="Refi"].selected { background: #2e7d32; border-color: #1b5e20; }
 
-    .status-inner[data-status="Refi"].selected {
-      background: #2e7d32;
-      border-color: #1b5e20;
-    }
-
-    .message {
-      margin-top: 8px;
-      font-size: 0.8rem;
-      color: #444;
-    }
-
+    .message { margin-top: 8px; font-size: 0.8rem; color: #444; }
     .error { color: #b00020; }
     .success { color: #1b5e20; }
 
     @media (max-width: 600px) {
-      th.task-col,
-      td.task-col {
+      th.task-col, td.task-col {
         min-width: 95px;
         max-width: 115px;
         font-size: 0.72rem;
@@ -239,7 +200,7 @@
   <h1>Snowboard Assessment</h1>
   <div class="small">
     Tap a square to set Inc (red), Con (yellow), or Refi (green). Data is saved locally first and
-    synced to Supabase automatically when online. You can also export to CSV.
+    synced to Supabase automatically when possible. You can also export to CSV.
   </div>
 
   <div class="controls">
@@ -271,9 +232,9 @@
   <div id="connectionStatus" class="offline" aria-live="polite">
     <div class="left">
       <span class="dot" aria-hidden="true"></span>
-      <div class="text" id="connectionText">Offline: changes saved on this device.</div>
+      <div class="text" id="connectionText">Checking cloud connection…</div>
     </div>
-    <div class="right" id="connectionRight">Not synced</div>
+    <div class="right" id="connectionRight">—</div>
   </div>
 
   <div id="statusMsg" class="message"></div>
@@ -326,74 +287,19 @@
     const LOCAL_STATE_PREFIX = "assessmentGrid_state_";
     const LOCAL_QUEUE_KEY = "assessmentGrid_queue_v1";
     const LOCAL_GROUPS_KEY = "assessmentGrid_groups";
-    const LOCAL_ROSTER_PREFIX = "assessmentGrid_roster_"; // NEW
+    const LOCAL_ROSTER_PREFIX = "assessmentGrid_roster_";
 
-    document.getElementById("applyLayoutBtn").addEventListener("click", () => {
-      const groupName = groupNameInput.value.trim();
-      currentStudents = parseStudents();
+    let cloudReachable = false;
 
-      if (!groupName) {
-        setMessage("Enter a group name first.", true);
-        return;
-      }
-      if (currentStudents.length === 0) {
-        setMessage("Enter at least one student.", true);
-        return;
-      }
+    function setMessage(text, isError = false) {
+      statusMsg.textContent = text;
+      statusMsg.className = "message " + (isError ? "error" : "success");
+    }
 
-      saveRoster(groupName, currentStudents); // NEW
-      renderTable();
-      clearMessage();
-      registerGroupName(groupName);
-      applyLocalStateToUI(groupName);
-
-      // iOS: force a reflow after table exists
-      requestAnimationFrame(() => forceTableReflow());
-      updateConnectionStatusUI();
-    });
-
-    document.getElementById("loadBtn").addEventListener("click", () => {
-      const groupName = groupNameInput.value.trim();
-      currentStudents = parseStudents();
-
-      if (groupName && currentStudents.length > 0) {
-        saveRoster(groupName, currentStudents); // NEW
-      }
-
-      renderTable();
-      registerGroupName(groupName);
-      loadSavedMarks();
-
-      requestAnimationFrame(() => forceTableReflow());
-      updateConnectionStatusUI();
-    });
-
-    exportBtn.addEventListener("click", exportCurrentGroupToCSV);
-
-    useGroupBtn.addEventListener("click", () => {
-      const selectedGroup = groupSelect.value;
-      if (!selectedGroup) {
-        setMessage("Select a saved group first.", true);
-        return;
-      }
-
-      groupNameInput.value = selectedGroup;
-
-      // NEW: pull roster first, then fall back to marks
-      const roster = loadRoster(selectedGroup);
-      if (roster.length > 0) {
-        studentsInput.value = roster.join(", ");
-      } else {
-        setStudentsFromLocalState(selectedGroup);
-      }
-
-      currentStudents = parseStudents();
-      renderTable();
-      loadSavedMarks();
-
-      requestAnimationFrame(() => forceTableReflow());
-      updateConnectionStatusUI();
-    });
+    function clearMessage() {
+      statusMsg.textContent = "";
+      statusMsg.className = "message";
+    }
 
     function parseStudents() {
       return studentsInput.value
@@ -402,222 +308,59 @@
         .filter(s => s.length > 0);
     }
 
-    function clearMessage() {
-      statusMsg.textContent = "";
-      statusMsg.className = "message";
-    }
-
-    function setMessage(text, isError = false) {
-      statusMsg.textContent = text;
-      statusMsg.className = "message " + (isError ? "error" : "success");
-    }
-
-    // NEW: roster persistence
+    // Roster persistence
     function saveRoster(groupName, students) {
-      try {
-        localStorage.setItem(LOCAL_ROSTER_PREFIX + groupName, JSON.stringify(students));
-      } catch {}
+      try { localStorage.setItem(LOCAL_ROSTER_PREFIX + groupName, JSON.stringify(students)); } catch {}
     }
-
     function loadRoster(groupName) {
       try {
         const raw = localStorage.getItem(LOCAL_ROSTER_PREFIX + groupName);
         const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed.filter(s => typeof s === "string" && s.trim().length > 0) : [];
-      } catch {
-        return [];
-      }
+        return Array.isArray(parsed) ? parsed : [];
+      } catch { return []; }
     }
 
-    // NEW: iOS Safari reflow helper
-    function forceTableReflow() {
-      const el = tableContainer;
-      if (!el) return;
-
-      // trigger layout without changing content
-      el.scrollLeft = 0;
-      const prev = el.style.transform;
-      el.style.transform = "translateZ(0)";
-      // read a layout property to force reflow
-      void el.offsetHeight;
-      el.style.transform = prev || "";
-
-      // One more tick can help after restore
-      requestAnimationFrame(() => {
-        void el.offsetHeight;
-      });
-    }
-
-    function getQueueCount() {
-      const q = loadQueue();
-      return Array.isArray(q) ? q.length : 0;
-    }
-
-    function updateConnectionStatusUI(customRightText) {
-      const online = navigator.onLine;
-      const queueCount = getQueueCount();
-
-      connectionStatusEl.classList.toggle("online", online);
-      connectionStatusEl.classList.toggle("offline", !online);
-
-      connectionTextEl.textContent = online
-        ? "Online: syncing to cloud when changes are made."
-        : "Offline: changes saved on this device.";
-
-      if (typeof customRightText === "string") {
-        connectionRightEl.textContent = customRightText;
-        return;
-      }
-
-      if (!online) {
-        connectionRightEl.textContent = queueCount > 0 ? ("Queued: " + queueCount) : "Not synced";
-      } else {
-        connectionRightEl.textContent = queueCount > 0 ? ("Pending sync: " + queueCount) : "Synced";
-      }
-    }
-
-    // Group list helpers (local)
+    // Group list
     function loadGroupList() {
       try {
         const raw = localStorage.getItem(LOCAL_GROUPS_KEY);
         return raw ? JSON.parse(raw) : [];
-      } catch {
-        return [];
-      }
+      } catch { return []; }
     }
-
     function saveGroupList(list) {
-      try {
-        localStorage.setItem(LOCAL_GROUPS_KEY, JSON.stringify(list));
-      } catch {}
+      try { localStorage.setItem(LOCAL_GROUPS_KEY, JSON.stringify(list)); } catch {}
     }
-
     function registerGroupName(groupName) {
       if (!groupName) return;
       const list = loadGroupList();
       if (!list.includes(groupName)) {
         list.push(groupName);
         saveGroupList(list);
-        refreshGroupSelectOptions();
       }
     }
 
-    async function refreshGroupSelectOptions() {
-      const localGroups = loadGroupList();
-
-      let evalGroups = [];
-      let courseRows = [];
-
-      if (navigator.onLine) {
-        try {
-          const { data: evalData, error: evalError } = await supabaseClient
-            .from("evaluations")
-            .select("group_name");
-          if (!evalError && evalData) {
-            evalGroups = evalData
-              .map(row => row.group_name)
-              .filter(name => typeof name === "string" && name.trim().length > 0);
-          } else if (evalError) {
-            console.error("Could not fetch evaluation group names", evalError);
-          }
-
-          const { data: courseData, error: courseError } = await supabaseClient
-            .from("courses")
-            .select("group_name,is_closed");
-          if (!courseError && courseData) {
-            courseRows = courseData;
-          } else if (courseError) {
-            console.error("Could not fetch courses", courseError);
-          }
-        } catch (e) {
-          console.error("Error fetching group names from Supabase", e);
-        }
-      }
-
-      const closedGroups = new Set(
-        courseRows
-          .filter(row => row.is_closed)
-          .map(row => row.group_name)
-      );
-
-      const openCourses = courseRows
-        .filter(row => !row.is_closed)
-        .map(row => row.group_name);
-
-      const openCloudGroupsSet = new Set();
-      evalGroups.forEach(name => {
-        if (!closedGroups.has(name)) {
-          openCloudGroupsSet.add(name);
-        }
-      });
-      openCourses.forEach(name => openCloudGroupsSet.add(name));
-
-      const mergedSet = new Set();
-
-      localGroups.forEach(name => {
-        if (!closedGroups.has(name)) {
-          mergedSet.add(name);
-        }
-      });
-
-      openCloudGroupsSet.forEach(name => mergedSet.add(name));
-
-      const mergedList = Array.from(mergedSet).sort((a, b) => a.localeCompare(b));
-
-      saveGroupList(mergedList);
-
-      while (groupSelect.options.length > 1) groupSelect.remove(1);
-      mergedList.forEach(name => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        groupSelect.appendChild(opt);
-      });
-    }
-
-    function setStudentsFromLocalState(groupName) {
-      const state = loadGroupState(groupName);
-      const studentsSet = new Set();
-      Object.keys(state).forEach(key => {
-        const [student] = key.split("|");
-        if (student) studentsSet.add(student);
-      });
-      if (studentsSet.size > 0) {
-        studentsInput.value = Array.from(studentsSet).join(", ");
-      }
-    }
-
-    // Local state helpers
+    // Local state
     function localKey(student, zone, task) {
       return `${student}|${zone}|${task}`;
     }
-
     function loadGroupState(groupName) {
       if (!groupName) return {};
       try {
         const raw = localStorage.getItem(LOCAL_STATE_PREFIX + groupName);
         return raw ? JSON.parse(raw) : {};
-      } catch {
-        return {};
-      }
+      } catch { return {}; }
     }
-
     function saveGroupState(groupName, state) {
       if (!groupName) return;
-      try {
-        localStorage.setItem(LOCAL_STATE_PREFIX + groupName, JSON.stringify(state));
-      } catch {}
+      try { localStorage.setItem(LOCAL_STATE_PREFIX + groupName, JSON.stringify(state)); } catch {}
     }
-
     function updateLocalState(groupName, student, zone, task, status) {
-      if (!groupName) return;
       const key = localKey(student, zone, task);
       const state = loadGroupState(groupName);
       state[key] = status;
       saveGroupState(groupName, state);
       registerGroupName(groupName);
 
-      // ensure roster exists even if user forgets to press Apply layout
       const roster = loadRoster(groupName);
       if (roster.length === 0) {
         const parsed = parseStudents();
@@ -626,9 +369,7 @@
     }
 
     function applyLocalStateToUI(groupName) {
-      if (!groupName) return;
       const state = loadGroupState(groupName);
-
       Object.entries(state).forEach(([k, status]) => {
         const [student, zone, task] = k.split("|");
         const selectorAll =
@@ -642,44 +383,79 @@
       });
     }
 
-    // Queue helpers
+    // Offline queue
     function loadQueue() {
       try {
         const raw = localStorage.getItem(LOCAL_QUEUE_KEY);
         return raw ? JSON.parse(raw) : [];
+      } catch { return []; }
+    }
+    function saveQueue(queue) {
+      try { localStorage.setItem(LOCAL_QUEUE_KEY, JSON.stringify(queue)); } catch {}
+    }
+    function enqueueOp(op) {
+      let queue = loadQueue();
+      queue = queue.filter(q => !(q.group_name === op.group_name && q.student === op.student && q.zone === op.zone && q.task === op.task));
+      queue.push(op);
+      saveQueue(queue);
+    }
+    function getQueueCount() {
+      const q = loadQueue();
+      return Array.isArray(q) ? q.length : 0;
+    }
+
+    // iOS-proof "cloud reachable" check (short timeout)
+    async function checkCloudReachable(timeoutMs = 2000) {
+      try {
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), timeoutMs);
+
+        // A tiny request to Supabase REST endpoint. If it returns 401/403 that is still "reachable".
+        const url = SUPABASE_URL + "/rest/v1/";
+        const res = await fetch(url, {
+          method: "GET",
+          headers: { apikey: SUPABASE_ANON_KEY },
+          signal: controller.signal
+        });
+
+        clearTimeout(t);
+        return !!res; // if fetch succeeded, backend is reachable
       } catch {
-        return [];
+        return false;
       }
     }
 
-    function saveQueue(queue) {
-      try {
-        localStorage.setItem(LOCAL_QUEUE_KEY, JSON.stringify(queue));
-      } catch {}
+    function updateConnectionIndicator() {
+      const queueCount = getQueueCount();
+
+      if (cloudReachable) {
+        connectionStatusEl.classList.add("online");
+        connectionStatusEl.classList.remove("offline");
+        connectionTextEl.textContent = "Online: cloud is reachable.";
+        connectionRightEl.textContent = queueCount > 0 ? ("Pending sync: " + queueCount) : "Synced";
+      } else {
+        connectionStatusEl.classList.add("offline");
+        connectionStatusEl.classList.remove("online");
+        connectionTextEl.textContent = "Offline: cloud not reachable (saving locally).";
+        connectionRightEl.textContent = queueCount > 0 ? ("Queued: " + queueCount) : "Local only";
+      }
     }
 
-    function enqueueOp(op) {
-      let queue = loadQueue();
-      queue = queue.filter(
-        q =>
-          !(
-            q.group_name === op.group_name &&
-            q.student === op.student &&
-            q.zone === op.zone &&
-            q.task === op.task
-          )
-      );
-      queue.push(op);
-      saveQueue(queue);
-      registerGroupName(op.group_name);
-      updateConnectionStatusUI();
+    async function refreshConnectivity() {
+      // hint only, do not trust it
+      connectionTextEl.textContent = "Checking cloud connection…";
+      connectionRightEl.textContent = "—";
+
+      cloudReachable = await checkCloudReachable(2000);
+      updateConnectionIndicator();
     }
 
     async function trySaveToSupabase(op, isRetry = false) {
-      if (!navigator.onLine) {
+      // never block local save
+      if (!cloudReachable) {
         enqueueOp(op);
-        if (!isRetry) setMessage("Saved locally. No network, will sync when online.");
-        updateConnectionStatusUI();
+        if (!isRetry) setMessage("Saved locally. Cloud not reachable.");
+        updateConnectionIndicator();
         return false;
       }
 
@@ -698,35 +474,35 @@
         if (insError) throw insError;
 
         if (!isRetry) setMessage("Saved.");
-        updateConnectionStatusUI();
+        updateConnectionIndicator();
         return true;
       } catch (e) {
-        console.error("Supabase save failed", e);
         enqueueOp(op);
         if (!isRetry) {
           const msg = e && e.message ? e.message : String(e);
           setMessage("Saved locally, cloud error: " + msg, true);
         }
-        updateConnectionStatusUI();
+        // if a cloud request failed, mark cloud unreachable until next refresh
+        cloudReachable = false;
+        updateConnectionIndicator();
         return false;
       }
     }
 
     async function processQueue() {
-      if (!navigator.onLine) {
-        updateConnectionStatusUI();
+      const queue = loadQueue();
+      if (queue.length === 0) {
+        updateConnectionIndicator();
         return;
       }
 
-      let queue = loadQueue();
-      if (queue.length === 0) {
-        updateConnectionStatusUI();
-        return;
-      }
+      // check reachability again before trying
+      await refreshConnectivity();
+      if (!cloudReachable) return;
 
       const remaining = [];
       setMessage("Syncing offline changes...");
-      updateConnectionStatusUI("Syncing...");
+      connectionRightEl.textContent = "Syncing…";
 
       for (const op of queue) {
         const ok = await trySaveToSupabase(op, true);
@@ -740,43 +516,56 @@
       } else {
         setMessage("Some changes still saved locally. Will retry.", true);
       }
-
-      updateConnectionStatusUI();
+      updateConnectionIndicator();
     }
 
-    window.addEventListener("online", () => {
-      updateConnectionStatusUI();
-      processQueue();
-      refreshGroupSelectOptions();
-      requestAnimationFrame(() => forceTableReflow());
-    });
+    // Populate dropdown from local first (never blocked)
+    function refreshGroupSelectFromLocalOnly() {
+      const groups = loadGroupList().slice().sort((a, b) => a.localeCompare(b));
+      while (groupSelect.options.length > 1) groupSelect.remove(1);
+      groups.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        groupSelect.appendChild(opt);
+      });
+    }
 
-    window.addEventListener("offline", () => {
-      updateConnectionStatusUI();
-      requestAnimationFrame(() => forceTableReflow());
-    });
+    async function refreshGroupSelectWithCloudIfPossible() {
+      refreshGroupSelectFromLocalOnly();
 
-    // IMPORTANT for iOS Safari restore-from-cache
-    window.addEventListener("pageshow", () => {
-      // Re-render based on current inputs, then force layout
-      currentStudents = parseStudents();
-      if (currentStudents.length > 0 && groupNameInput.value.trim()) {
-        renderTable();
-        applyLocalStateToUI(groupNameInput.value.trim());
+      await refreshConnectivity();
+      if (!cloudReachable) return;
+
+      try {
+        const { data: evalData } = await supabaseClient.from("evaluations").select("group_name");
+        const { data: courseData } = await supabaseClient.from("courses").select("group_name,is_closed");
+
+        const groupsSet = new Set(loadGroupList());
+        if (evalData) evalData.forEach(r => r.group_name && groupsSet.add(r.group_name));
+        if (courseData) courseData.forEach(r => r.group_name && groupsSet.add(r.group_name));
+
+        const closed = new Set();
+        if (courseData) courseData.filter(r => r.is_closed).forEach(r => closed.add(r.group_name));
+
+        const merged = Array.from(groupsSet).filter(n => !closed.has(n)).sort((a, b) => a.localeCompare(b));
+        saveGroupList(merged);
+
+        refreshGroupSelectFromLocalOnly();
+      } catch {
+        // keep local list
       }
-      requestAnimationFrame(() => forceTableReflow());
-      updateConnectionStatusUI();
-    });
+    }
 
-    window.addEventListener("orientationchange", () => {
-      requestAnimationFrame(() => forceTableReflow());
-    });
+    function forceTableReflow() {
+      tableContainer.scrollLeft = 0;
+      const prev = tableContainer.style.transform;
+      tableContainer.style.transform = "translateZ(0)";
+      void tableContainer.offsetHeight;
+      tableContainer.style.transform = prev || "";
+      requestAnimationFrame(() => { void tableContainer.offsetHeight; });
+    }
 
-    window.addEventListener("resize", () => {
-      requestAnimationFrame(() => forceTableReflow());
-    });
-
-    // Table rendering
     function renderTable() {
       const groupName = groupNameInput.value.trim();
 
@@ -784,7 +573,6 @@
         setMessage("Enter a group name first.", true);
         return;
       }
-
       if (currentStudents.length === 0) {
         setMessage("Enter at least one student.", true);
         return;
@@ -813,16 +601,13 @@
           html += `<tr class="zone-row zone-row-${task.zone}">`;
           html += `<th class="zone-header task-col">Zone ${task.zone}</th>`;
           currentStudents.forEach(student => {
-            html += `<th class="zone-header student-group-header" colspan="${STATUSES.length}">
-                       ${student}
-                     </th>`;
+            html += `<th class="zone-header student-group-header" colspan="${STATUSES.length}">${student}</th>`;
           });
-          html += "</tr>`;
+          html += "</tr>";
           lastZone = task.zone;
         }
 
         html += `<tr><td class="task-col">${task.label}</td>`;
-
         currentStudents.forEach(student => {
           STATUSES.forEach(status => {
             html += `
@@ -836,27 +621,23 @@
               </td>`;
           });
         });
-
         html += "</tr>";
       });
 
       html += "</table>";
       tableContainer.innerHTML = html;
 
-      document.querySelectorAll(".status-inner").forEach(el => {
-        el.addEventListener("click", onStatusClick);
-      });
+      document.querySelectorAll(".status-inner").forEach(el => el.addEventListener("click", onStatusClick));
+      requestAnimationFrame(() => forceTableReflow());
     }
 
     async function onStatusClick(event) {
       const el = event.currentTarget;
       const student = decodeURIComponent(el.dataset.student);
-      const zone = parseInt(el.dataset.zone);
+      const zone = parseInt(el.dataset.zone, 10);
       const taskLabel = decodeURIComponent(el.dataset.task);
       const status = el.dataset.status;
       const groupName = groupNameInput.value.trim();
-
-      if (!groupName) return;
 
       const selectorAll =
         `.status-inner[data-student="${encodeURIComponent(student)}"]` +
@@ -870,7 +651,6 @@
       const op = { group_name: groupName, student, zone, task: taskLabel, status };
       await trySaveToSupabase(op);
 
-      updateConnectionStatusUI();
       requestAnimationFrame(() => forceTableReflow());
     }
 
@@ -878,18 +658,16 @@
       const groupName = groupNameInput.value.trim();
       if (!groupName) return;
 
-      registerGroupName(groupName);
+      // Local first
+      document.querySelectorAll(".status-inner").forEach(node => node.classList.remove("selected"));
+      applyLocalStateToUI(groupName);
 
-      if (!navigator.onLine) {
-        applyLocalStateToUI(groupName);
-        setMessage("Offline: showing marks stored on this device.");
-        updateConnectionStatusUI();
-        requestAnimationFrame(() => forceTableReflow());
+      // Then try cloud merge if reachable
+      await refreshConnectivity();
+      if (!cloudReachable) {
+        setMessage("Loaded local marks. Cloud not reachable.");
         return;
       }
-
-      setMessage("Syncing and loading from Supabase...");
-      updateConnectionStatusUI("Syncing...");
 
       await processQueue();
 
@@ -899,18 +677,14 @@
         .eq("group_name", groupName);
 
       if (error) {
-        console.error(error);
-        setMessage("Failed to load from cloud. Keeping local marks.", true);
-        applyLocalStateToUI(groupName);
-        updateConnectionStatusUI();
-        requestAnimationFrame(() => forceTableReflow());
+        setMessage("Loaded local marks. Cloud load failed.", true);
         return;
       }
 
       const localState = loadGroupState(groupName);
       const mergedState = { ...localState };
 
-      data.forEach(row => {
+      (data || []).forEach(row => {
         const key = localKey(row.student, row.zone, row.task);
         if (mergedState[key] == null) mergedState[key] = row.status;
       });
@@ -921,11 +695,8 @@
       applyLocalStateToUI(groupName);
 
       setMessage("Loaded. Local marks kept where present.");
-      updateConnectionStatusUI();
-      requestAnimationFrame(() => forceTableReflow());
     }
 
-    // CSV export
     function exportCurrentGroupToCSV() {
       const groupName = groupNameInput.value.trim();
       if (!groupName) {
@@ -958,8 +729,7 @@
         lines.push(values.join(","));
       });
 
-      const csvContent = lines.join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
 
       const link = document.createElement("a");
@@ -971,19 +741,76 @@
       URL.revokeObjectURL(url);
 
       setMessage("CSV exported from local data.");
-      updateConnectionStatusUI();
     }
 
-    // Initial layout
+    document.getElementById("applyLayoutBtn").addEventListener("click", () => {
+      const groupName = groupNameInput.value.trim();
+      currentStudents = parseStudents();
+
+      if (!groupName) { setMessage("Enter a group name first.", true); return; }
+      if (currentStudents.length === 0) { setMessage("Enter at least one student.", true); return; }
+
+      saveRoster(groupName, currentStudents);
+      registerGroupName(groupName);
+      refreshGroupSelectFromLocalOnly();
+
+      renderTable();
+      clearMessage();
+      applyLocalStateToUI(groupName);
+
+      refreshConnectivity(); // indicator only
+    });
+
+    document.getElementById("loadBtn").addEventListener("click", () => {
+      const groupName = groupNameInput.value.trim();
+      currentStudents = parseStudents();
+      if (groupName && currentStudents.length > 0) {
+        saveRoster(groupName, currentStudents);
+        registerGroupName(groupName);
+        refreshGroupSelectFromLocalOnly();
+      }
+      renderTable();
+      loadSavedMarks();
+    });
+
+    exportBtn.addEventListener("click", exportCurrentGroupToCSV);
+
+    useGroupBtn.addEventListener("click", () => {
+      const selectedGroup = groupSelect.value;
+      if (!selectedGroup) {
+        setMessage("Select a saved group first.", true);
+        return;
+      }
+
+      groupNameInput.value = selectedGroup;
+
+      const roster = loadRoster(selectedGroup);
+      if (roster.length > 0) {
+        studentsInput.value = roster.join(", ");
+      }
+
+      currentStudents = parseStudents();
+      renderTable();
+      loadSavedMarks();
+
+      refreshConnectivity();
+    });
+
+    // iOS page restore: refresh indicator, force reflow
+    window.addEventListener("pageshow", () => {
+      refreshGroupSelectFromLocalOnly();
+      refreshConnectivity();
+      requestAnimationFrame(() => forceTableReflow());
+    });
+
+    window.addEventListener("orientationchange", () => requestAnimationFrame(() => forceTableReflow()));
+    window.addEventListener("resize", () => requestAnimationFrame(() => forceTableReflow()));
+
+    // Init
+    refreshGroupSelectFromLocalOnly();
     currentStudents = parseStudents();
     renderTable();
-    refreshGroupSelectOptions();
-    applyLocalStateToUI(groupNameInput.value.trim());
-    processQueue();
-    updateConnectionStatusUI();
-
-    // initial reflow help (iOS)
-    requestAnimationFrame(() => forceTableReflow());
+    refreshConnectivity();
   </script>
 </body>
 </html>
