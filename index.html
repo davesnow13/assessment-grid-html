@@ -59,10 +59,58 @@
       cursor: default;
     }
 
+    /* Connection status banner (NEW) */
+    #connectionStatus {
+      margin: 10px 0 10px 0;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #c9d1d9;
+      background: #ffffff;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    #connectionStatus .left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    #connectionStatus .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      flex: 0 0 auto;
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+
+    #connectionStatus .text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #connectionStatus .right {
+      flex: 0 0 auto;
+      font-size: 0.85rem;
+      color: #555;
+      white-space: nowrap;
+    }
+
+    /* Online vs offline styles */
+    #connectionStatus.online .dot { background: #2e7d32; }
+    #connectionStatus.online { border-color: #b7dfc2; background: #f1fbf3; }
+
+    #connectionStatus.offline .dot { background: #616161; }
+    #connectionStatus.offline { border-color: #d0d0d0; background: #f6f6f6; }
+
     /* Horizontal scroll wrapper */
     #tableContainer {
       overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
     }
 
     table {
@@ -79,7 +127,7 @@
       font-size: 0.85rem;
     }
 
-    /* Sticky first column for task names — narrower with wrapping */
+    /* Sticky first column for task names */
     th.task-col,
     td.task-col {
       text-align: left;
@@ -111,22 +159,12 @@
     }
 
     /* Zone row background colors */
-    .zone-row-1 th {
-      background: #e3f2fd;
-    }
-
-    .zone-row-2 th {
-      background: #e8f5e9;
-    }
-
-    .zone-row-3 th {
-      background: #fff3e0;
-    }
+    .zone-row-1 th { background: #e3f2fd; }
+    .zone-row-2 th { background: #e8f5e9; }
+    .zone-row-3 th { background: #fff3e0; }
 
     /* Base status cell */
-    .status-cell {
-      background: #f5f5f5;
-    }
+    .status-cell { background: #f5f5f5; }
 
     .status-inner {
       width: 20px;
@@ -149,9 +187,7 @@
 
     /* Inc = red */
     .status-header[data-status="Inc"],
-    .status-cell[data-status="Inc"] {
-      background: #ffebee;
-    }
+    .status-cell[data-status="Inc"] { background: #ffebee; }
 
     .status-inner[data-status="Inc"].selected {
       background: #c62828;
@@ -160,9 +196,7 @@
 
     /* Con = yellow */
     .status-header[data-status="Con"],
-    .status-cell[data-status="Con"] {
-      background: #fffde7;
-    }
+    .status-cell[data-status="Con"] { background: #fffde7; }
 
     .status-inner[data-status="Con"].selected {
       background: #f9a825;
@@ -171,9 +205,7 @@
 
     /* Refi = green */
     .status-header[data-status="Refi"],
-    .status-cell[data-status="Refi"] {
-      background: #e8f5e9;
-    }
+    .status-cell[data-status="Refi"] { background: #e8f5e9; }
 
     .status-inner[data-status="Refi"].selected {
       background: #2e7d32;
@@ -186,15 +218,9 @@
       color: #444;
     }
 
-    .error {
-      color: #b00020;
-    }
+    .error { color: #b00020; }
+    .success { color: #1b5e20; }
 
-    .success {
-      color: #1b5e20;
-    }
-
-    /* Smaller screens: narrower first column and bigger tap targets */
     @media (max-width: 600px) {
       th.task-col,
       td.task-col {
@@ -203,28 +229,14 @@
         font-size: 0.72rem;
         line-height: 1.15;
       }
-      table {
-        font-size: 0.75rem;
-      }
-      th, td {
-        padding: 4px 2px;
-      }
-      .status-inner {
-        width: 26px;
-        height: 26px;
-      }
+      table { font-size: 0.75rem; }
+      th, td { padding: 4px 2px; }
+      .status-inner { width: 26px; height: 26px; }
     }
 
-    /* Touch or gloves */
     @media (pointer: coarse) {
-      .status-inner {
-        width: 30px;
-        height: 30px;
-      }
-      th, td {
-        padding-top: 6px;
-        padding-bottom: 6px;
-      }
+      .status-inner { width: 30px; height: 30px; }
+      th, td { padding-top: 6px; padding-bottom: 6px; }
     }
   </style>
 </head>
@@ -259,6 +271,15 @@
       </select>
     </label>
     <button id="useGroupBtn" class="secondary">Use group</button>
+  </div>
+
+  <!-- Connection indicator (NEW) -->
+  <div id="connectionStatus" class="offline" aria-live="polite">
+    <div class="left">
+      <span class="dot" aria-hidden="true"></span>
+      <div class="text" id="connectionText">Offline: changes saved on this device.</div>
+    </div>
+    <div class="right" id="connectionRight">Not synced</div>
   </div>
 
   <div id="statusMsg" class="message"></div>
@@ -303,32 +324,32 @@
     const groupSelect = document.getElementById("groupSelect");
     const useGroupBtn = document.getElementById("useGroupBtn");
 
+    // NEW: connection indicator elements
+    const connectionStatusEl = document.getElementById("connectionStatus");
+    const connectionTextEl = document.getElementById("connectionText");
+    const connectionRightEl = document.getElementById("connectionRight");
+
     let currentStudents = [];
 
     const LOCAL_STATE_PREFIX = "assessmentGrid_state_";
     const LOCAL_QUEUE_KEY = "assessmentGrid_queue_v1";
     const LOCAL_GROUPS_KEY = "assessmentGrid_groups";
-    const LOCAL_GROUP_META_KEY = "assessmentGrid_groupMeta_v1"; // NEW: roster storage
 
     document.getElementById("applyLayoutBtn").addEventListener("click", () => {
       currentStudents = parseStudents();
       renderTable();
       clearMessage();
-
-      const g = groupNameInput.value.trim();
-      registerGroupName(g);
-      saveGroupRoster(g, currentStudents); // NEW
-      applyLocalStateToUI(g);
+      registerGroupName(groupNameInput.value.trim());
+      applyLocalStateToUI(groupNameInput.value.trim());
+      updateConnectionStatusUI();
     });
 
     document.getElementById("loadBtn").addEventListener("click", () => {
       currentStudents = parseStudents();
       renderTable();
-
-      const g = groupNameInput.value.trim();
-      registerGroupName(g);
-      saveGroupRoster(g, currentStudents); // NEW
+      registerGroupName(groupNameInput.value.trim());
       loadSavedMarks();
+      updateConnectionStatusUI();
     });
 
     exportBtn.addEventListener("click", exportCurrentGroupToCSV);
@@ -339,21 +360,12 @@
         setMessage("Select a saved group first.", true);
         return;
       }
-
       groupNameInput.value = selectedGroup;
-
-      // NEW: prefer roster saved for this group (works even if no marks yet)
-      const roster = loadGroupRoster(selectedGroup);
-      if (roster && roster.length > 0) {
-        studentsInput.value = roster.join(", ");
-      } else {
-        // Fallback: infer from marks (old behavior)
-        setStudentsFromLocalState(selectedGroup);
-      }
-
+      setStudentsFromLocalState(selectedGroup);
       currentStudents = parseStudents();
       renderTable();
       loadSavedMarks();
+      updateConnectionStatusUI();
     });
 
     function parseStudents() {
@@ -371,6 +383,37 @@
     function setMessage(text, isError = false) {
       statusMsg.textContent = text;
       statusMsg.className = "message " + (isError ? "error" : "success");
+    }
+
+    // NEW: connection indicator logic
+    function getQueueCount() {
+      const q = loadQueue();
+      return Array.isArray(q) ? q.length : 0;
+    }
+
+    function updateConnectionStatusUI(customRightText) {
+      const online = navigator.onLine;
+      const queueCount = getQueueCount();
+
+      connectionStatusEl.classList.toggle("online", online);
+      connectionStatusEl.classList.toggle("offline", !online);
+
+      if (online) {
+        connectionTextEl.textContent = "Online: syncing to cloud when changes are made.";
+      } else {
+        connectionTextEl.textContent = "Offline: changes saved on this device.";
+      }
+
+      if (typeof customRightText === "string") {
+        connectionRightEl.textContent = customRightText;
+        return;
+      }
+
+      if (!online) {
+        connectionRightEl.textContent = queueCount > 0 ? ("Queued: " + queueCount) : "Not synced";
+      } else {
+        connectionRightEl.textContent = queueCount > 0 ? ("Pending sync: " + queueCount) : "Synced";
+      }
     }
 
     // Group list helpers (local)
@@ -397,45 +440,6 @@
         saveGroupList(list);
         refreshGroupSelectOptions();
       }
-    }
-
-    // NEW: group roster storage (so offline reload keeps full student list)
-    function loadAllGroupMeta() {
-      try {
-        const raw = localStorage.getItem(LOCAL_GROUP_META_KEY);
-        return raw ? JSON.parse(raw) : {};
-      } catch {
-        return {};
-      }
-    }
-
-    function saveAllGroupMeta(meta) {
-      try {
-        localStorage.setItem(LOCAL_GROUP_META_KEY, JSON.stringify(meta));
-      } catch {}
-    }
-
-    function saveGroupRoster(groupName, students) {
-      if (!groupName) return;
-      if (!Array.isArray(students)) return;
-
-      const cleaned = students.map(s => String(s).trim()).filter(Boolean);
-      if (cleaned.length === 0) return;
-
-      const meta = loadAllGroupMeta();
-      meta[groupName] = {
-        students: cleaned,
-        updatedAt: Date.now()
-      };
-      saveAllGroupMeta(meta);
-    }
-
-    function loadGroupRoster(groupName) {
-      if (!groupName) return null;
-      const meta = loadAllGroupMeta();
-      const row = meta[groupName];
-      if (!row || !Array.isArray(row.students)) return null;
-      return row.students;
     }
 
     // Fetch group names from Supabase and local storage,
@@ -605,12 +609,14 @@
       queue.push(op);
       saveQueue(queue);
       registerGroupName(op.group_name);
+      updateConnectionStatusUI();
     }
 
     async function trySaveToSupabase(op, isRetry = false) {
       if (!navigator.onLine) {
         enqueueOp(op);
         if (!isRetry) setMessage("Saved locally. No network, will sync when online.");
+        updateConnectionStatusUI();
         return false;
       }
 
@@ -629,6 +635,7 @@
         if (insError) throw insError;
 
         if (!isRetry) setMessage("Saved.");
+        updateConnectionStatusUI();
         return true;
       } catch (e) {
         console.error("Supabase save failed", e);
@@ -637,32 +644,51 @@
           const msg = e && e.message ? e.message : String(e);
           setMessage("Saved locally, cloud error: " + msg, true);
         }
+        updateConnectionStatusUI();
         return false;
       }
     }
 
     async function processQueue() {
-      if (!navigator.onLine) return;
+      if (!navigator.onLine) {
+        updateConnectionStatusUI();
+        return;
+      }
+
       let queue = loadQueue();
-      if (queue.length === 0) return;
+      if (queue.length === 0) {
+        updateConnectionStatusUI();
+        return;
+      }
 
       const remaining = [];
       setMessage("Syncing offline changes...");
+      updateConnectionStatusUI("Syncing...");
+
       for (const op of queue) {
         const ok = await trySaveToSupabase(op, true);
         if (!ok) remaining.push(op);
       }
+
       saveQueue(remaining);
+
       if (remaining.length === 0) {
         setMessage("Offline changes synced.");
       } else {
         setMessage("Some changes still saved locally. Will retry.", true);
       }
+
+      updateConnectionStatusUI();
     }
 
     window.addEventListener("online", () => {
+      updateConnectionStatusUI();
       processQueue();
       refreshGroupSelectOptions();
+    });
+
+    window.addEventListener("offline", () => {
+      updateConnectionStatusUI();
     });
 
     // Table rendering
@@ -756,9 +782,6 @@
 
       updateLocalState(groupName, student, zone, taskLabel, status);
 
-      // NEW: keep roster saved even if only 1 student gets marks
-      saveGroupRoster(groupName, currentStudents);
-
       const op = {
         group_name: groupName,
         student,
@@ -768,6 +791,7 @@
       };
 
       await trySaveToSupabase(op);
+      updateConnectionStatusUI();
     }
 
     async function loadSavedMarks() {
@@ -775,15 +799,16 @@
       if (!groupName) return;
 
       registerGroupName(groupName);
-      saveGroupRoster(groupName, currentStudents); // NEW
 
       if (!navigator.onLine) {
         applyLocalStateToUI(groupName);
         setMessage("Offline: showing marks stored on this device.");
+        updateConnectionStatusUI();
         return;
       }
 
       setMessage("Syncing and loading from Supabase...");
+      updateConnectionStatusUI("Syncing...");
 
       await processQueue();
 
@@ -796,6 +821,7 @@
         console.error(error);
         setMessage("Failed to load from cloud. Keeping local marks.", true);
         applyLocalStateToUI(groupName);
+        updateConnectionStatusUI();
         return;
       }
 
@@ -815,6 +841,7 @@
       applyLocalStateToUI(groupName);
 
       setMessage("Loaded. Local marks kept where present.");
+      updateConnectionStatusUI();
     }
 
     // CSV export
@@ -873,6 +900,7 @@
       URL.revokeObjectURL(url);
 
       setMessage("CSV exported from local data.");
+      updateConnectionStatusUI();
     }
 
     // Initial layout
@@ -881,6 +909,7 @@
     refreshGroupSelectOptions();
     applyLocalStateToUI(groupNameInput.value.trim());
     processQueue();
+    updateConnectionStatusUI();
   </script>
 </body>
 </html>
