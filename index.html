@@ -11,9 +11,7 @@
       background: #f4f6f8;
     }
 
-    h1 {
-      margin-bottom: 4px;
-    }
+    h1 { margin-bottom: 4px; }
 
     .small {
       font-size: 0.85rem;
@@ -28,9 +26,7 @@
       align-items: center;
     }
 
-    label {
-      font-size: 0.9rem;
-    }
+    label { font-size: 0.9rem; }
 
     input[type="text"], select {
       padding: 4px 8px;
@@ -59,7 +55,7 @@
       cursor: default;
     }
 
-    /* Connection status banner (NEW) */
+    /* Connection status banner */
     #connectionStatus {
       margin: 10px 0 10px 0;
       padding: 8px 10px;
@@ -101,7 +97,6 @@
       white-space: nowrap;
     }
 
-    /* Online vs offline styles */
     #connectionStatus.online .dot { background: #2e7d32; }
     #connectionStatus.online { border-color: #b7dfc2; background: #f1fbf3; }
 
@@ -111,6 +106,7 @@
     /* Horizontal scroll wrapper */
     #tableContainer {
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch; /* IMPORTANT for iOS */
     }
 
     table {
@@ -163,7 +159,6 @@
     .zone-row-2 th { background: #e8f5e9; }
     .zone-row-3 th { background: #fff3e0; }
 
-    /* Base status cell */
     .status-cell { background: #f5f5f5; }
 
     .status-inner {
@@ -273,7 +268,6 @@
     <button id="useGroupBtn" class="secondary">Use group</button>
   </div>
 
-  <!-- Connection indicator (NEW) -->
   <div id="connectionStatus" class="offline" aria-live="polite">
     <div class="left">
       <span class="dot" aria-hidden="true"></span>
@@ -285,7 +279,6 @@
   <div id="statusMsg" class="message"></div>
   <div id="tableContainer"></div>
 
-  <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
@@ -324,7 +317,6 @@
     const groupSelect = document.getElementById("groupSelect");
     const useGroupBtn = document.getElementById("useGroupBtn");
 
-    // NEW: connection indicator elements
     const connectionStatusEl = document.getElementById("connectionStatus");
     const connectionTextEl = document.getElementById("connectionText");
     const connectionRightEl = document.getElementById("connectionRight");
@@ -334,21 +326,45 @@
     const LOCAL_STATE_PREFIX = "assessmentGrid_state_";
     const LOCAL_QUEUE_KEY = "assessmentGrid_queue_v1";
     const LOCAL_GROUPS_KEY = "assessmentGrid_groups";
+    const LOCAL_ROSTER_PREFIX = "assessmentGrid_roster_"; // NEW
 
     document.getElementById("applyLayoutBtn").addEventListener("click", () => {
+      const groupName = groupNameInput.value.trim();
       currentStudents = parseStudents();
+
+      if (!groupName) {
+        setMessage("Enter a group name first.", true);
+        return;
+      }
+      if (currentStudents.length === 0) {
+        setMessage("Enter at least one student.", true);
+        return;
+      }
+
+      saveRoster(groupName, currentStudents); // NEW
       renderTable();
       clearMessage();
-      registerGroupName(groupNameInput.value.trim());
-      applyLocalStateToUI(groupNameInput.value.trim());
+      registerGroupName(groupName);
+      applyLocalStateToUI(groupName);
+
+      // iOS: force a reflow after table exists
+      requestAnimationFrame(() => forceTableReflow());
       updateConnectionStatusUI();
     });
 
     document.getElementById("loadBtn").addEventListener("click", () => {
+      const groupName = groupNameInput.value.trim();
       currentStudents = parseStudents();
+
+      if (groupName && currentStudents.length > 0) {
+        saveRoster(groupName, currentStudents); // NEW
+      }
+
       renderTable();
-      registerGroupName(groupNameInput.value.trim());
+      registerGroupName(groupName);
       loadSavedMarks();
+
+      requestAnimationFrame(() => forceTableReflow());
       updateConnectionStatusUI();
     });
 
@@ -360,11 +376,22 @@
         setMessage("Select a saved group first.", true);
         return;
       }
+
       groupNameInput.value = selectedGroup;
-      setStudentsFromLocalState(selectedGroup);
+
+      // NEW: pull roster first, then fall back to marks
+      const roster = loadRoster(selectedGroup);
+      if (roster.length > 0) {
+        studentsInput.value = roster.join(", ");
+      } else {
+        setStudentsFromLocalState(selectedGroup);
+      }
+
       currentStudents = parseStudents();
       renderTable();
       loadSavedMarks();
+
+      requestAnimationFrame(() => forceTableReflow());
       updateConnectionStatusUI();
     });
 
@@ -385,7 +412,42 @@
       statusMsg.className = "message " + (isError ? "error" : "success");
     }
 
-    // NEW: connection indicator logic
+    // NEW: roster persistence
+    function saveRoster(groupName, students) {
+      try {
+        localStorage.setItem(LOCAL_ROSTER_PREFIX + groupName, JSON.stringify(students));
+      } catch {}
+    }
+
+    function loadRoster(groupName) {
+      try {
+        const raw = localStorage.getItem(LOCAL_ROSTER_PREFIX + groupName);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed.filter(s => typeof s === "string" && s.trim().length > 0) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    // NEW: iOS Safari reflow helper
+    function forceTableReflow() {
+      const el = tableContainer;
+      if (!el) return;
+
+      // trigger layout without changing content
+      el.scrollLeft = 0;
+      const prev = el.style.transform;
+      el.style.transform = "translateZ(0)";
+      // read a layout property to force reflow
+      void el.offsetHeight;
+      el.style.transform = prev || "";
+
+      // One more tick can help after restore
+      requestAnimationFrame(() => {
+        void el.offsetHeight;
+      });
+    }
+
     function getQueueCount() {
       const q = loadQueue();
       return Array.isArray(q) ? q.length : 0;
@@ -398,11 +460,9 @@
       connectionStatusEl.classList.toggle("online", online);
       connectionStatusEl.classList.toggle("offline", !online);
 
-      if (online) {
-        connectionTextEl.textContent = "Online: syncing to cloud when changes are made.";
-      } else {
-        connectionTextEl.textContent = "Offline: changes saved on this device.";
-      }
+      connectionTextEl.textContent = online
+        ? "Online: syncing to cloud when changes are made."
+        : "Offline: changes saved on this device.";
 
       if (typeof customRightText === "string") {
         connectionRightEl.textContent = customRightText;
@@ -442,8 +502,6 @@
       }
     }
 
-    // Fetch group names from Supabase and local storage,
-    // hide groups that are closed in the "courses" table.
     async function refreshGroupSelectOptions() {
       const localGroups = loadGroupList();
 
@@ -508,9 +566,7 @@
 
       saveGroupList(mergedList);
 
-      while (groupSelect.options.length > 1) {
-        groupSelect.remove(1);
-      }
+      while (groupSelect.options.length > 1) groupSelect.remove(1);
       mergedList.forEach(name => {
         const opt = document.createElement("option");
         opt.value = name;
@@ -560,6 +616,13 @@
       state[key] = status;
       saveGroupState(groupName, state);
       registerGroupName(groupName);
+
+      // ensure roster exists even if user forgets to press Apply layout
+      const roster = loadRoster(groupName);
+      if (roster.length === 0) {
+        const parsed = parseStudents();
+        if (parsed.length > 0) saveRoster(groupName, parsed);
+      }
     }
 
     function applyLocalStateToUI(groupName) {
@@ -685,10 +748,32 @@
       updateConnectionStatusUI();
       processQueue();
       refreshGroupSelectOptions();
+      requestAnimationFrame(() => forceTableReflow());
     });
 
     window.addEventListener("offline", () => {
       updateConnectionStatusUI();
+      requestAnimationFrame(() => forceTableReflow());
+    });
+
+    // IMPORTANT for iOS Safari restore-from-cache
+    window.addEventListener("pageshow", () => {
+      // Re-render based on current inputs, then force layout
+      currentStudents = parseStudents();
+      if (currentStudents.length > 0 && groupNameInput.value.trim()) {
+        renderTable();
+        applyLocalStateToUI(groupNameInput.value.trim());
+      }
+      requestAnimationFrame(() => forceTableReflow());
+      updateConnectionStatusUI();
+    });
+
+    window.addEventListener("orientationchange", () => {
+      requestAnimationFrame(() => forceTableReflow());
+    });
+
+    window.addEventListener("resize", () => {
+      requestAnimationFrame(() => forceTableReflow());
     });
 
     // Table rendering
@@ -732,7 +817,7 @@
                        ${student}
                      </th>`;
           });
-          html += "</tr>";
+          html += "</tr>`;
           lastZone = task.zone;
         }
 
@@ -782,16 +867,11 @@
 
       updateLocalState(groupName, student, zone, taskLabel, status);
 
-      const op = {
-        group_name: groupName,
-        student,
-        zone,
-        task: taskLabel,
-        status
-      };
-
+      const op = { group_name: groupName, student, zone, task: taskLabel, status };
       await trySaveToSupabase(op);
+
       updateConnectionStatusUI();
+      requestAnimationFrame(() => forceTableReflow());
     }
 
     async function loadSavedMarks() {
@@ -804,6 +884,7 @@
         applyLocalStateToUI(groupName);
         setMessage("Offline: showing marks stored on this device.");
         updateConnectionStatusUI();
+        requestAnimationFrame(() => forceTableReflow());
         return;
       }
 
@@ -822,6 +903,7 @@
         setMessage("Failed to load from cloud. Keeping local marks.", true);
         applyLocalStateToUI(groupName);
         updateConnectionStatusUI();
+        requestAnimationFrame(() => forceTableReflow());
         return;
       }
 
@@ -830,9 +912,7 @@
 
       data.forEach(row => {
         const key = localKey(row.student, row.zone, row.task);
-        if (mergedState[key] == null) {
-          mergedState[key] = row.status;
-        }
+        if (mergedState[key] == null) mergedState[key] = row.status;
       });
 
       saveGroupState(groupName, mergedState);
@@ -842,6 +922,7 @@
 
       setMessage("Loaded. Local marks kept where present.");
       updateConnectionStatusUI();
+      requestAnimationFrame(() => forceTableReflow());
     }
 
     // CSV export
@@ -860,27 +941,17 @@
       }
 
       const headers = ["group_name", "student", "zone", "task", "status"];
-      const lines = [];
-      lines.push(headers.join(","));
+      const lines = [headers.join(",")];
 
       entries.forEach(([key, status]) => {
         const [student, zone, task] = key.split("|");
-
-        const rowObj = {
-          group_name: groupName,
-          student,
-          zone: zone,
-          task: task,
-          status: status
-        };
+        const rowObj = { group_name: groupName, student, zone, task, status };
 
         const values = headers.map(h => {
           let val = rowObj[h];
           if (val == null) val = "";
           val = String(val).replace(/"/g, '""');
-          if (val.search(/[",\n]/) !== -1) {
-            val = '"' + val + '"';
-          }
+          if (val.search(/[",\n]/) !== -1) val = '"' + val + '"';
           return val;
         });
 
@@ -910,6 +981,9 @@
     applyLocalStateToUI(groupNameInput.value.trim());
     processQueue();
     updateConnectionStatusUI();
+
+    // initial reflow help (iOS)
+    requestAnimationFrame(() => forceTableReflow());
   </script>
 </body>
 </html>
