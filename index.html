@@ -62,6 +62,7 @@
     /* Horizontal scroll wrapper */
     #tableContainer {
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     table {
@@ -78,7 +79,7 @@
       font-size: 0.85rem;
     }
 
-    /* Sticky first column for task names */
+    /* Sticky first column for task names — narrower with wrapping */
     th.task-col,
     td.task-col {
       text-align: left;
@@ -193,6 +194,7 @@
       color: #1b5e20;
     }
 
+    /* Smaller screens: narrower first column and bigger tap targets */
     @media (max-width: 600px) {
       th.task-col,
       td.task-col {
@@ -213,6 +215,7 @@
       }
     }
 
+    /* Touch or gloves */
     @media (pointer: coarse) {
       .status-inner {
         width: 30px;
@@ -305,6 +308,53 @@
     const LOCAL_STATE_PREFIX = "assessmentGrid_state_";
     const LOCAL_QUEUE_KEY = "assessmentGrid_queue_v1";
     const LOCAL_GROUPS_KEY = "assessmentGrid_groups";
+    const LOCAL_GROUP_META_KEY = "assessmentGrid_groupMeta_v1"; // NEW: roster storage
+
+    document.getElementById("applyLayoutBtn").addEventListener("click", () => {
+      currentStudents = parseStudents();
+      renderTable();
+      clearMessage();
+
+      const g = groupNameInput.value.trim();
+      registerGroupName(g);
+      saveGroupRoster(g, currentStudents); // NEW
+      applyLocalStateToUI(g);
+    });
+
+    document.getElementById("loadBtn").addEventListener("click", () => {
+      currentStudents = parseStudents();
+      renderTable();
+
+      const g = groupNameInput.value.trim();
+      registerGroupName(g);
+      saveGroupRoster(g, currentStudents); // NEW
+      loadSavedMarks();
+    });
+
+    exportBtn.addEventListener("click", exportCurrentGroupToCSV);
+
+    useGroupBtn.addEventListener("click", () => {
+      const selectedGroup = groupSelect.value;
+      if (!selectedGroup) {
+        setMessage("Select a saved group first.", true);
+        return;
+      }
+
+      groupNameInput.value = selectedGroup;
+
+      // NEW: prefer roster saved for this group (works even if no marks yet)
+      const roster = loadGroupRoster(selectedGroup);
+      if (roster && roster.length > 0) {
+        studentsInput.value = roster.join(", ");
+      } else {
+        // Fallback: infer from marks (old behavior)
+        setStudentsFromLocalState(selectedGroup);
+      }
+
+      currentStudents = parseStudents();
+      renderTable();
+      loadSavedMarks();
+    });
 
     function parseStudents() {
       return studentsInput.value
@@ -349,32 +399,43 @@
       }
     }
 
-    /**
-     * NEW: Ensure a row exists in "courses" whenever a group is used.
-     * This is what makes admin.html able to list the group.
-     */
-    async function ensureCourseExists(groupName) {
-      if (!groupName) return;
-      if (!navigator.onLine) return;
-
+    // NEW: group roster storage (so offline reload keeps full student list)
+    function loadAllGroupMeta() {
       try {
-        const { data, error } = await supabaseClient
-          .from("courses")
-          .select("group_name")
-          .eq("group_name", groupName)
-          .limit(1);
-
-        if (error) throw error;
-        if (data && data.length > 0) return;
-
-        const { error: insError } = await supabaseClient
-          .from("courses")
-          .insert([{ group_name: groupName, is_closed: false }]);
-
-        if (insError) throw insError;
-      } catch (e) {
-        console.error("ensureCourseExists failed", e);
+        const raw = localStorage.getItem(LOCAL_GROUP_META_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
       }
+    }
+
+    function saveAllGroupMeta(meta) {
+      try {
+        localStorage.setItem(LOCAL_GROUP_META_KEY, JSON.stringify(meta));
+      } catch {}
+    }
+
+    function saveGroupRoster(groupName, students) {
+      if (!groupName) return;
+      if (!Array.isArray(students)) return;
+
+      const cleaned = students.map(s => String(s).trim()).filter(Boolean);
+      if (cleaned.length === 0) return;
+
+      const meta = loadAllGroupMeta();
+      meta[groupName] = {
+        students: cleaned,
+        updatedAt: Date.now()
+      };
+      saveAllGroupMeta(meta);
+    }
+
+    function loadGroupRoster(groupName) {
+      if (!groupName) return null;
+      const meta = loadAllGroupMeta();
+      const row = meta[groupName];
+      if (!row || !Array.isArray(row.students)) return null;
+      return row.students;
     }
 
     // Fetch group names from Supabase and local storage,
@@ -554,9 +615,6 @@
       }
 
       try {
-        // Ensure the group exists in courses before writing evaluations
-        await ensureCourseExists(op.group_name);
-
         const { error: delError } = await supabaseClient
           .from("evaluations")
           .delete()
@@ -698,6 +756,9 @@
 
       updateLocalState(groupName, student, zone, taskLabel, status);
 
+      // NEW: keep roster saved even if only 1 student gets marks
+      saveGroupRoster(groupName, currentStudents);
+
       const op = {
         group_name: groupName,
         student,
@@ -714,6 +775,7 @@
       if (!groupName) return;
 
       registerGroupName(groupName);
+      saveGroupRoster(groupName, currentStudents); // NEW
 
       if (!navigator.onLine) {
         applyLocalStateToUI(groupName);
@@ -812,45 +874,6 @@
 
       setMessage("CSV exported from local data.");
     }
-
-    // Button handlers (UPDATED)
-    document.getElementById("applyLayoutBtn").addEventListener("click", async () => {
-      currentStudents = parseStudents();
-      renderTable();
-      clearMessage();
-      const g = groupNameInput.value.trim();
-      registerGroupName(g);
-      await ensureCourseExists(g);
-      applyLocalStateToUI(g);
-      refreshGroupSelectOptions();
-    });
-
-    document.getElementById("loadBtn").addEventListener("click", async () => {
-      currentStudents = parseStudents();
-      renderTable();
-      const g = groupNameInput.value.trim();
-      registerGroupName(g);
-      await ensureCourseExists(g);
-      loadSavedMarks();
-      refreshGroupSelectOptions();
-    });
-
-    exportBtn.addEventListener("click", exportCurrentGroupToCSV);
-
-    useGroupBtn.addEventListener("click", async () => {
-      const selectedGroup = groupSelect.value;
-      if (!selectedGroup) {
-        setMessage("Select a saved group first.", true);
-        return;
-      }
-      groupNameInput.value = selectedGroup;
-      await ensureCourseExists(selectedGroup);
-      setStudentsFromLocalState(selectedGroup);
-      currentStudents = parseStudents();
-      renderTable();
-      loadSavedMarks();
-      refreshGroupSelectOptions();
-    });
 
     // Initial layout
     currentStudents = parseStudents();
