@@ -207,22 +207,30 @@
       color: #111;
     }
 
-    /* Print: hide controls, keep summary and table */
-    @media print {
-      .controls,
-      #statusMsg {
-        display: none !important;
-      }
+   /* Print: hide controls, keep summary and table */
+@media print {
 
-      body {
-        background: white;
-        padding: 0;
-      }
+  .controls,
+  #statusMsg {
+    display: none !important;
+  }
 
-      #summaryContainer,
-      #tableContainer {
-        margin-top: 0;
-      }
+  /* Force browsers to print background colors */
+  * {
+    -webkit-print-color-adjust: exact !important; /* Chrome / Safari */
+    print-color-adjust: exact !important;         /* Modern spec */
+  }
+
+  body {
+    background: white;
+    padding: 0;
+  }
+
+  #summaryContainer,
+  #tableContainer {
+    margin-top: 0;
+  }
+}
 
       /* When printing all students, hide the on-screen header to avoid duplication */
       body.printing-all #screenHeader {
