@@ -308,10 +308,10 @@
         .filter(s => s.length > 0);
     }
 
-    // Roster persistence
     function saveRoster(groupName, students) {
       try { localStorage.setItem(LOCAL_ROSTER_PREFIX + groupName, JSON.stringify(students)); } catch {}
     }
+
     function loadRoster(groupName) {
       try {
         const raw = localStorage.getItem(LOCAL_ROSTER_PREFIX + groupName);
@@ -320,16 +320,17 @@
       } catch { return []; }
     }
 
-    // Group list
     function loadGroupList() {
       try {
         const raw = localStorage.getItem(LOCAL_GROUPS_KEY);
         return raw ? JSON.parse(raw) : [];
       } catch { return []; }
     }
+
     function saveGroupList(list) {
       try { localStorage.setItem(LOCAL_GROUPS_KEY, JSON.stringify(list)); } catch {}
     }
+
     function registerGroupName(groupName) {
       if (!groupName) return;
       const list = loadGroupList();
@@ -339,10 +340,10 @@
       }
     }
 
-    // Local state
     function localKey(student, zone, task) {
       return `${student}|${zone}|${task}`;
     }
+
     function loadGroupState(groupName) {
       if (!groupName) return {};
       try {
@@ -350,10 +351,12 @@
         return raw ? JSON.parse(raw) : {};
       } catch { return {}; }
     }
+
     function saveGroupState(groupName, state) {
       if (!groupName) return;
       try { localStorage.setItem(LOCAL_STATE_PREFIX + groupName, JSON.stringify(state)); } catch {}
     }
+
     function updateLocalState(groupName, student, zone, task, status) {
       const key = localKey(student, zone, task);
       const state = loadGroupState(groupName);
@@ -383,34 +386,34 @@
       });
     }
 
-    // Offline queue
     function loadQueue() {
       try {
         const raw = localStorage.getItem(LOCAL_QUEUE_KEY);
         return raw ? JSON.parse(raw) : [];
       } catch { return []; }
     }
+
     function saveQueue(queue) {
       try { localStorage.setItem(LOCAL_QUEUE_KEY, JSON.stringify(queue)); } catch {}
     }
+
     function enqueueOp(op) {
       let queue = loadQueue();
       queue = queue.filter(q => !(q.group_name === op.group_name && q.student === op.student && q.zone === op.zone && q.task === op.task));
       queue.push(op);
       saveQueue(queue);
     }
+
     function getQueueCount() {
       const q = loadQueue();
       return Array.isArray(q) ? q.length : 0;
     }
 
-    // iOS-proof "cloud reachable" check (short timeout)
     async function checkCloudReachable(timeoutMs = 2000) {
       try {
         const controller = new AbortController();
         const t = setTimeout(() => controller.abort(), timeoutMs);
 
-        // A tiny request to Supabase REST endpoint. If it returns 401/403 that is still "reachable".
         const url = SUPABASE_URL + "/rest/v1/";
         const res = await fetch(url, {
           method: "GET",
@@ -419,7 +422,7 @@
         });
 
         clearTimeout(t);
-        return !!res; // if fetch succeeded, backend is reachable
+        return !!res;
       } catch {
         return false;
       }
@@ -442,16 +445,13 @@
     }
 
     async function refreshConnectivity() {
-      // hint only, do not trust it
       connectionTextEl.textContent = "Checking cloud connection…";
       connectionRightEl.textContent = "—";
-
       cloudReachable = await checkCloudReachable(2000);
       updateConnectionIndicator();
     }
 
     async function trySaveToSupabase(op, isRetry = false) {
-      // never block local save
       if (!cloudReachable) {
         enqueueOp(op);
         if (!isRetry) setMessage("Saved locally. Cloud not reachable.");
@@ -482,7 +482,6 @@
           const msg = e && e.message ? e.message : String(e);
           setMessage("Saved locally, cloud error: " + msg, true);
         }
-        // if a cloud request failed, mark cloud unreachable until next refresh
         cloudReachable = false;
         updateConnectionIndicator();
         return false;
@@ -496,7 +495,6 @@
         return;
       }
 
-      // check reachability again before trying
       await refreshConnectivity();
       if (!cloudReachable) return;
 
@@ -519,7 +517,6 @@
       updateConnectionIndicator();
     }
 
-    // Populate dropdown from local first (never blocked)
     function refreshGroupSelectFromLocalOnly() {
       const groups = loadGroupList().slice().sort((a, b) => a.localeCompare(b));
       while (groupSelect.options.length > 1) groupSelect.remove(1);
@@ -531,34 +528,8 @@
       });
     }
 
-    async function refreshGroupSelectWithCloudIfPossible() {
-      refreshGroupSelectFromLocalOnly();
-
-      await refreshConnectivity();
-      if (!cloudReachable) return;
-
-      try {
-        const { data: evalData } = await supabaseClient.from("evaluations").select("group_name");
-        const { data: courseData } = await supabaseClient.from("courses").select("group_name,is_closed");
-
-        const groupsSet = new Set(loadGroupList());
-        if (evalData) evalData.forEach(r => r.group_name && groupsSet.add(r.group_name));
-        if (courseData) courseData.forEach(r => r.group_name && groupsSet.add(r.group_name));
-
-        const closed = new Set();
-        if (courseData) courseData.filter(r => r.is_closed).forEach(r => closed.add(r.group_name));
-
-        const merged = Array.from(groupsSet).filter(n => !closed.has(n)).sort((a, b) => a.localeCompare(b));
-        saveGroupList(merged);
-
-        refreshGroupSelectFromLocalOnly();
-      } catch {
-        // keep local list
-      }
-    }
-
+    // iOS reflow helper (NO scrollLeft changes)
     function forceTableReflow() {
-      tableContainer.scrollLeft = 0;
       const prev = tableContainer.style.transform;
       tableContainer.style.transform = "translateZ(0)";
       void tableContainer.offsetHeight;
@@ -651,18 +622,16 @@
       const op = { group_name: groupName, student, zone, task: taskLabel, status };
       await trySaveToSupabase(op);
 
-      requestAnimationFrame(() => forceTableReflow());
+      // IMPORTANT: do NOT force reflow here, it can disturb scroll position on iOS
     }
 
     async function loadSavedMarks() {
       const groupName = groupNameInput.value.trim();
       if (!groupName) return;
 
-      // Local first
       document.querySelectorAll(".status-inner").forEach(node => node.classList.remove("selected"));
       applyLocalStateToUI(groupName);
 
-      // Then try cloud merge if reachable
       await refreshConnectivity();
       if (!cloudReachable) {
         setMessage("Loaded local marks. Cloud not reachable.");
@@ -758,7 +727,7 @@
       clearMessage();
       applyLocalStateToUI(groupName);
 
-      refreshConnectivity(); // indicator only
+      refreshConnectivity();
     });
 
     document.getElementById("loadBtn").addEventListener("click", () => {
@@ -796,7 +765,6 @@
       refreshConnectivity();
     });
 
-    // iOS page restore: refresh indicator, force reflow
     window.addEventListener("pageshow", () => {
       refreshGroupSelectFromLocalOnly();
       refreshConnectivity();
