@@ -98,6 +98,7 @@
     #connectionStatus.offline .dot { background: #616161; }
     #connectionStatus.offline { border-color: #d0d0d0; background: #f6f6f6; }
 
+    /* Horizontal scroll wrapper */
     #tableContainer {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
@@ -107,7 +108,7 @@
       border-collapse: collapse;
       width: 100%;
       background: white;
-      min-width: 700px;
+      min-width: 760px;
     }
 
     th, td {
@@ -117,30 +118,83 @@
       font-size: 0.85rem;
     }
 
+    /* Sticky first column for task names */
     th.task-col,
     td.task-col {
       text-align: left;
-      min-width: 70px;
-      max-width: 85px;
+      min-width: 90px;
+      max-width: 140px;
       background: #f9fbfd;
       position: sticky;
       left: 0;
       z-index: 3;
       white-space: normal;
       word-break: break-word;
-      padding-left: 4px;
-      padding-right: 4px;
-      line-height: 1.1;
+      padding-left: 6px;
+      padding-right: 6px;
+      line-height: 1.15;
     }
 
-    th.zone-header { text-align: left; font-size: 0.95rem; }
+    th.zone-header {
+      text-align: left;
+      font-size: 0.95rem;
+      position: sticky;
+      left: 0;
+      z-index: 4;
+    }
+
     th.student-group-header { background: #d9dde0; }
+
     th.status-header { font-size: 0.75rem; }
 
+    /* Zone row background colors */
     .zone-row-1 th { background: #e3f2fd; }
     .zone-row-2 th { background: #e8f5e9; }
     .zone-row-3 th { background: #fff3e0; }
 
+    /* Zone header row layout */
+    .zone-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: space-between;
+    }
+    .zone-title-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .zone-title-left .zone-title {
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .zone-title-left .zone-subtitle {
+      font-weight: 500;
+      font-size: 0.78rem;
+      color: #333;
+      line-height: 1.1;
+    }
+
+    /* Info button (the “I” in a circle) */
+    .info-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid #333;
+      background: rgba(255,255,255,0.75);
+      color: #111;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex: 0 0 auto;
+      user-select: none;
+    }
+    .info-btn:active { transform: scale(0.98); }
+
+    /* Base status cell */
     .status-cell { background: #f5f5f5; }
 
     .status-inner {
@@ -162,14 +216,17 @@
       font-size: 0.8rem;
     }
 
+    /* Inc = red */
     .status-header[data-status="Inc"],
     .status-cell[data-status="Inc"] { background: #ffebee; }
     .status-inner[data-status="Inc"].selected { background: #c62828; border-color: #8e0000; }
 
+    /* Con = yellow */
     .status-header[data-status="Con"],
     .status-cell[data-status="Con"] { background: #fffde7; }
     .status-inner[data-status="Con"].selected { background: #f9a825; border-color: #c17900; }
 
+    /* Refi = green */
     .status-header[data-status="Refi"],
     .status-cell[data-status="Refi"] { background: #e8f5e9; }
     .status-inner[data-status="Refi"].selected { background: #2e7d32; border-color: #1b5e20; }
@@ -178,16 +235,80 @@
     .error { color: #b00020; }
     .success { color: #1b5e20; }
 
+    /* Info modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 9999;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      width: 100%;
+      max-width: 720px;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #c9d1d9;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 14px 16px;
+      background: #f6f8fa;
+      border-bottom: 1px solid #c9d1d9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .modal-close {
+      border: 1px solid #4a5056;
+      background: #5b636a;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .modal-body {
+      padding: 14px 16px;
+      font-size: 0.95rem;
+      line-height: 1.35;
+      color: #111;
+    }
+    .modal-section-title {
+      margin-top: 8px;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+    .modal ul {
+      margin: 0 0 10px 18px;
+      padding: 0;
+    }
+    .modal li { margin: 4px 0; }
+    .modal .muted { color: #333; }
+
     @media (max-width: 600px) {
       th.task-col, td.task-col {
-        min-width: 95px;
-        max-width: 115px;
+        min-width: 110px;
+        max-width: 160px;
         font-size: 0.72rem;
         line-height: 1.15;
       }
       table { font-size: 0.75rem; }
       th, td { padding: 4px 2px; }
       .status-inner { width: 26px; height: 26px; }
+      .info-btn { width: 30px; height: 30px; }
     }
 
     @media (pointer: coarse) {
@@ -240,6 +361,17 @@
   <div id="statusMsg" class="message"></div>
   <div id="tableContainer"></div>
 
+  <!-- Info modal -->
+  <div id="infoBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document">
+      <div class="modal-header">
+        <div class="modal-title" id="infoTitle">Info</div>
+        <button class="modal-close" id="infoCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="infoBody"></div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
@@ -250,24 +382,91 @@
 
     const STATUSES = ["Inc", "Con", "Refi"];
 
-    const TASKS = [
-      { zone: 1, label: "Load and unload a chairlift and Riding the magic carpet" },
-      { zone: 1, label: "Skating in a straight line" },
-      { zone: 1, label: "Skate around cones" },
-      { zone: 1, label: "Skate across a slope on both edges" },
-      { zone: 1, label: "Switch skating in straight line" },
-      { zone: 1, label: "J-turns" },
-
-      { zone: 2, label: "Stand up on both edges" },
-      { zone: 2, label: "Sideslip both edges" },
-      { zone: 2, label: "Traversing on both edges" },
-      { zone: 2, label: "Turning edge to edge down fall line (Linked turns)" },
-
-      { zone: 3, label: "Linked Turns (Continuous)" },
-      { zone: 3, label: "Speed Control Through Turn Shape" },
-      { zone: 3, label: "Edge Release and Engagement" },
-      { zone: 3, label: "Flow and Continuity" },
-      { zone: 3, label: "Adaptability" }
+    /**
+     * UPDATED GRID DEFINITIONS (Zones, Tasks, and “Info” content)
+     */
+    const ZONES = [
+      {
+        zone: 1,
+        title: "Zone 1",
+        subtitle: "FLATS AND MAGIC CARPET AREA",
+        tasks: [
+          "Skating in a Straight Line",
+          "Skating Around Cones",
+          "Skating Across a Slope (Both Edges)",
+          "Switch Skating",
+          "J-Turns (One-Footed)"
+        ],
+        info: {
+          constraintsTitle: "Possible Constraints",
+          constraints: [
+            "Glide with reduced space or toward a target marker.",
+            "Perform skating tasks with a variable snow surface (slightly packed or soft).",
+            "Skating around obstacles (example: cones, stubbies).",
+            "Use minor slope gradient to encourage longer glide or speed awareness."
+          ],
+          focusTitle: "Evaluation Focus",
+          focus: [
+            "Balance and coordination while gliding",
+            "Smooth push and glide transitions",
+            "Controlled direction and stopping",
+            "Awareness of surrounding space and other riders"
+          ]
+        }
+      },
+      {
+        zone: 2,
+        title: "Zone 2",
+        subtitle: "BUNNY HILL, MAGIC CARPET (GENTLE SLOPES)",
+        tasks: [
+          "Riding the Lift (magic carpet, t-bar, or chair)",
+          "Standing on Both Edges",
+          "Side Slipping (Both Edges)",
+          "Traversing (Both Edges)",
+          "Linked Turns"
+        ],
+        info: {
+          constraintsTitle: "Possible Variations",
+          constraints: [
+            "Perform a controlled stop during a sideslip or traverse.",
+            "Link multiple turns with slight changes in snow texture or slope pitch.",
+            "Ride both toe and heel sides in the same run.",
+            "Follow a marked path or cone line to encourage directional awareness."
+          ],
+          focusTitle: "Evaluation Focus",
+          focus: [
+            "Smooth loading and unloading of the magic carpet",
+            "Balanced posture while standing on both edges",
+            "Controlled side slips without abrupt stops",
+            "Stable traverses across the slope",
+            "Linked turns showing direction and speed control"
+          ]
+        }
+      },
+      {
+        zone: 3,
+        title: "Zone 3",
+        subtitle: "FLAGGED GREEN RUN",
+        tasks: [
+          "Linked Turns (Continuous)",
+          "Speed Control Through Turn Shape",
+          "Edge Release and Engagement",
+          "Flow and Continuity",
+          "Adaptability"
+        ],
+        info: {
+          constraintsTitle: "Evaluation Focus",
+          constraints: [
+            "Continuous linked turns along the flagged path",
+            "Speed managed through turn shape, not braking",
+            "Controlled edge release and engagement",
+            "Flow maintained through variable turn timing",
+            "Adaptability to terrain, snow, and surrounding traffic"
+          ],
+          focusTitle: "",
+          focus: []
+        }
+      }
     ];
 
     const groupNameInput = document.getElementById("groupNameInput");
@@ -281,6 +480,11 @@
     const connectionStatusEl = document.getElementById("connectionStatus");
     const connectionTextEl = document.getElementById("connectionText");
     const connectionRightEl = document.getElementById("connectionRight");
+
+    const infoBackdrop = document.getElementById("infoBackdrop");
+    const infoTitle = document.getElementById("infoTitle");
+    const infoBody = document.getElementById("infoBody");
+    const infoCloseBtn = document.getElementById("infoCloseBtn");
 
     let currentStudents = [];
 
@@ -537,6 +741,64 @@
       requestAnimationFrame(() => { void tableContainer.offsetHeight; });
     }
 
+    function openZoneInfo(zoneNumber) {
+      const z = ZONES.find(x => x.zone === zoneNumber);
+      if (!z) return;
+
+      const titleText = `${z.title}: ${z.subtitle}`;
+      infoTitle.textContent = titleText;
+
+      const parts = [];
+
+      if (z.info) {
+        if (z.info.constraintsTitle && Array.isArray(z.info.constraints) && z.info.constraints.length > 0) {
+          parts.push(`<div class="modal-section-title">${escapeHtml(z.info.constraintsTitle)}</div>`);
+          parts.push("<ul>");
+          z.info.constraints.forEach(item => parts.push(`<li>${escapeHtml(item)}</li>`));
+          parts.push("</ul>");
+        }
+
+        if (z.info.focusTitle && Array.isArray(z.info.focus) && z.info.focus.length > 0) {
+          parts.push(`<div class="modal-section-title">${escapeHtml(z.info.focusTitle)}</div>`);
+          parts.push("<ul>");
+          z.info.focus.forEach(item => parts.push(`<li>${escapeHtml(item)}</li>`));
+          parts.push("</ul>");
+        }
+      }
+
+      if (parts.length === 0) {
+        parts.push(`<div class="muted">No additional info for this zone.</div>`);
+      }
+
+      infoBody.innerHTML = parts.join("");
+      infoBackdrop.classList.add("open");
+      infoBackdrop.setAttribute("aria-hidden", "false");
+      infoCloseBtn.focus();
+    }
+
+    function closeZoneInfo() {
+      infoBackdrop.classList.remove("open");
+      infoBackdrop.setAttribute("aria-hidden", "true");
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    infoCloseBtn.addEventListener("click", closeZoneInfo);
+    infoBackdrop.addEventListener("click", (e) => {
+      if (e.target === infoBackdrop) closeZoneInfo();
+    });
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && infoBackdrop.classList.contains("open")) closeZoneInfo();
+    });
+
+    // Table rendering
     function renderTable() {
       const groupName = groupNameInput.value.trim();
 
@@ -551,9 +813,10 @@
 
       let html = "<table>";
 
+      // top headers
       html += "<tr><th class='task-col'>Task</th>";
       currentStudents.forEach(student => {
-        html += `<th class="student-group-header" colspan="${STATUSES.length}">${student}</th>`;
+        html += `<th class="student-group-header" colspan="${STATUSES.length}">${escapeHtml(student)}</th>`;
       });
       html += "</tr>";
 
@@ -565,40 +828,62 @@
       });
       html += "</tr>";
 
-      let lastZone = null;
-
-      TASKS.forEach(task => {
-        if (task.zone !== lastZone) {
-          html += `<tr class="zone-row zone-row-${task.zone}">`;
-          html += `<th class="zone-header task-col">Zone ${task.zone}</th>`;
-          currentStudents.forEach(student => {
-            html += `<th class="zone-header student-group-header" colspan="${STATUSES.length}">${student}</th>`;
-          });
-          html += "</tr>";
-          lastZone = task.zone;
-        }
-
-        html += `<tr><td class="task-col">${task.label}</td>`;
+      // zones + tasks
+      ZONES.forEach(zoneObj => {
+        // zone header row with info button (NOT part of marking grid)
+        html += `<tr class="zone-row zone-row-${zoneObj.zone}">`;
+        html += `<th class="zone-header task-col">
+                  <div class="zone-title-wrap">
+                    <div class="zone-title-left">
+                      <div class="zone-title">${escapeHtml(zoneObj.title)}</div>
+                      <div class="zone-subtitle">${escapeHtml(zoneObj.subtitle)}</div>
+                    </div>
+                    <div class="info-btn" role="button" tabindex="0" data-zone-info="${zoneObj.zone}" aria-label="Zone ${zoneObj.zone} information">i</div>
+                  </div>
+                </th>`;
         currentStudents.forEach(student => {
-          STATUSES.forEach(status => {
-            html += `
-              <td class="status-cell" data-status="${status}">
-                <div class="status-inner"
-                     data-student="${encodeURIComponent(student)}"
-                     data-zone="${task.zone}"
-                     data-task="${encodeURIComponent(task.label)}"
-                     data-status="${status}">
-                </div>
-              </td>`;
-          });
+          html += `<th class="zone-header student-group-header" colspan="${STATUSES.length}">${escapeHtml(student)}</th>`;
         });
         html += "</tr>";
+
+        zoneObj.tasks.forEach(taskLabel => {
+          html += `<tr><td class="task-col">${escapeHtml(taskLabel)}</td>`;
+
+          currentStudents.forEach(student => {
+            STATUSES.forEach(status => {
+              html += `
+                <td class="status-cell" data-status="${status}">
+                  <div class="status-inner"
+                       data-student="${encodeURIComponent(student)}"
+                       data-zone="${zoneObj.zone}"
+                       data-task="${encodeURIComponent(taskLabel)}"
+                       data-status="${status}">
+                  </div>
+                </td>`;
+            });
+          });
+
+          html += "</tr>";
+        });
       });
 
       html += "</table>";
       tableContainer.innerHTML = html;
 
       document.querySelectorAll(".status-inner").forEach(el => el.addEventListener("click", onStatusClick));
+
+      // Info buttons
+      document.querySelectorAll('[data-zone-info]').forEach(btn => {
+        const z = parseInt(btn.getAttribute("data-zone-info"), 10);
+        btn.addEventListener("click", () => openZoneInfo(z));
+        btn.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openZoneInfo(z);
+          }
+        });
+      });
+
       requestAnimationFrame(() => forceTableReflow());
     }
 
@@ -621,8 +906,6 @@
 
       const op = { group_name: groupName, student, zone, task: taskLabel, status };
       await trySaveToSupabase(op);
-
-      // IMPORTANT: do NOT force reflow here, it can disturb scroll position on iOS
     }
 
     async function loadSavedMarks() {
@@ -666,6 +949,7 @@
       setMessage("Loaded. Local marks kept where present.");
     }
 
+    // CSV export
     function exportCurrentGroupToCSV() {
       const groupName = groupNameInput.value.trim();
       if (!groupName) {
@@ -774,7 +1058,7 @@
     window.addEventListener("orientationchange", () => requestAnimationFrame(() => forceTableReflow()));
     window.addEventListener("resize", () => requestAnimationFrame(() => forceTableReflow()));
 
-    // Init
+    // Initial layout
     refreshGroupSelectFromLocalOnly();
     currentStudents = parseStudents();
     renderTable();
