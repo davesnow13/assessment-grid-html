@@ -22,10 +22,7 @@
       --bad: #b00020;
       --muted: #555;
 
-      /* Key changes:
-         1) Task column is clamped smaller on portrait (prevents it taking ~75%).
-         2) Sticky z-index layering prevents participant headers from sliding over the task column.
-      */
+      /* Task column width tuned for portrait */
       --task-col-w: clamp(180px, 34vw, 260px);
 
       --cell-w: 56px;
@@ -131,7 +128,6 @@
       font-weight: 600;
     }
 
-    /* Grid container */
     #gridWrap{
       margin-top: 12px;
       overflow: auto;
@@ -155,29 +151,25 @@
       background-clip: padding-box;
     }
 
-    /* Task column sizing */
     .task-col{
       width: var(--task-col-w);
       min-width: 180px;
       max-width: 260px;
     }
 
-    /* Participant column sizing */
     .mark-col{
       width: var(--cell-w);
       min-width: var(--cell-w);
       text-align: center;
     }
 
-    /* Sticky headers */
     thead th{
       position: sticky;
       top: 0;
       background: var(--header-bg);
-      z-index: 5; /* lower than task column */
+      z-index: 5;
     }
 
-    /* Top-left corner cell should always be above everything */
     thead th.task-col{
       left: 0;
       z-index: 40;
@@ -187,32 +179,18 @@
       padding-left: 12px;
     }
 
-    /* Sticky task column cells (body) */
     tbody td.task-col{
       position: sticky;
       left: 0;
-      z-index: 30; /* above header row cells */
+      z-index: 30;
       background: #fff;
       padding: 10px 12px;
       font-size: 1.05rem;
       line-height: 1.2;
-
-      /* Prevent long text forcing column wider */
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    /* Optional: allow wrapping instead of ellipsis.
-       If you prefer wrapping, comment out the 3 lines above and uncomment below.
-    */
-    /*
-    tbody td.task-col{
-      white-space: normal;
-      overflow-wrap: anywhere;
-    }
-    */
-
-    /* Participant header cells */
     .student-header{
       height: var(--header-row-h);
       font-weight: 900;
@@ -222,11 +200,10 @@
       z-index: 5;
     }
 
-    /* Subheader row for Inc/Con/Refi */
     .subheader{
       position: sticky;
       top: var(--header-row-h);
-      z-index: 4; /* still below task column */
+      z-index: 4;
       font-weight: 900;
       font-size: 1.05rem;
       height: var(--subheader-row-h);
@@ -238,7 +215,6 @@
     .sub-con{ background: var(--con-bg); }
     .sub-refi{ background: var(--refi-bg); }
 
-    /* Zone title row */
     .zone-row td.task-col{
       font-weight: 900;
       font-size: 1.25rem;
@@ -256,7 +232,6 @@
     .zone2 td, .zone2 td.task-col{ background: var(--zone2-bg) !important; }
     .zone3 td, .zone3 td.task-col{ background: var(--zone3-bg) !important; }
 
-    /* Mark cells */
     .mark-cell{
       height: var(--cell-h);
       display: flex;
@@ -288,7 +263,6 @@
     .col-con{ background: var(--con-bg); }
     .col-refi{ background: var(--refi-bg); }
 
-    /* Info button */
     .info-btn{
       display: inline-flex;
       align-items: center;
@@ -305,7 +279,6 @@
       user-select: none;
     }
 
-    /* Modal */
     .modal-backdrop{
       position: fixed;
       inset: 0;
@@ -352,7 +325,6 @@
       cursor: pointer;
     }
 
-    /* Portrait tuning */
     @media (max-width: 520px){
       :root{
         --task-col-w: clamp(170px, 32vw, 240px);
@@ -362,14 +334,12 @@
       .small{ font-size: 0.9rem; }
     }
 
-    /* Landscape tuning */
     @media (orientation: landscape){
       :root{
         --task-col-w: clamp(220px, 24vw, 340px);
       }
     }
 
-    /* Print */
     @media print{
       body{ background: #fff; padding: 0; }
       .controls, #statusMsg, .banner{ display: none !important; }
@@ -387,7 +357,7 @@
   <div class="small">
     Tap a square to toggle Inc (red), Con (yellow), Refi (green), then blank.
     Data is saved locally first and synced to Supabase automatically when possible.
-    You can also export to CSV.
+    You can export to CSV.
   </div>
 
   <div class="controls">
@@ -409,12 +379,23 @@
     <button id="exportCsvBtn" class="secondary">Export CSV (this group)</button>
 
     <label style="margin-left: 6px;">
-      Saved groups:
+      Saved groups (this device):
       <select id="savedGroupsSelect">
         <option value="">Select a saved group</option>
       </select>
     </label>
-    <button id="useGroupBtn" class="secondary">Use group</button>
+    <button id="useGroupBtn" class="secondary">Use saved group</button>
+  </div>
+
+  <div class="controls">
+    <label>
+      Cloud groups (Supabase):
+      <select id="cloudGroupsSelect">
+        <option value="">Select a cloud group</option>
+      </select>
+    </label>
+    <button id="refreshCloudBtn" class="secondary">Refresh cloud list</button>
+    <button id="pullCloudBtn" class="secondary" disabled>Pull from cloud</button>
   </div>
 
   <div id="statusMsg"></div>
@@ -429,7 +410,6 @@
 
   <div id="gridWrap"></div>
 
-  <!-- Info modal -->
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
     <div class="modal">
       <h2 id="modalTitle">Information</h2>
@@ -446,7 +426,6 @@
     </div>
   </div>
 
-  <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     /***********************
@@ -459,7 +438,6 @@
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const LS_KEY = "snowboard_assessment_groups_v3";
-    const STATUS_ORDER = ["", "Inc", "Con", "Refi"];
 
     const ZONES = [
       {
@@ -558,6 +536,11 @@
     const exportCsvBtn = document.getElementById("exportCsvBtn");
     const savedGroupsSelect = document.getElementById("savedGroupsSelect");
     const useGroupBtn = document.getElementById("useGroupBtn");
+
+    const cloudGroupsSelect = document.getElementById("cloudGroupsSelect");
+    const refreshCloudBtn = document.getElementById("refreshCloudBtn");
+    const pullCloudBtn = document.getElementById("pullCloudBtn");
+
     const statusMsg = document.getElementById("statusMsg");
     const gridWrap = document.getElementById("gridWrap");
 
@@ -648,10 +631,10 @@
       const all = loadAllLocal();
       return all[groupName] || null;
     }
+
     function refreshSavedGroupsDropdown(){
       const all = loadAllLocal();
       const names = Object.keys(all).sort((a,b)=>a.localeCompare(b));
-
       while(savedGroupsSelect.options.length > 1){
         savedGroupsSelect.remove(1);
       }
@@ -681,12 +664,15 @@
         const { error } = await db.from("courses").select("group_name").limit(1);
         if(error){
           setOnlineBanner(false, "Local only");
+          pullCloudBtn.disabled = true;
           return false;
         }
         setOnlineBanner(true, syncingNow ? "Syncing..." : "Synced");
+        pullCloudBtn.disabled = !cloudGroupsSelect.value;
         return true;
       }catch(e){
         setOnlineBanner(false, "Local only");
+        pullCloudBtn.disabled = true;
         return false;
       }
     }
@@ -731,7 +717,7 @@
     });
 
     /***********************
-     * MARKS SHAPE + GRID
+     * MARKS + GRID
      ***********************/
     function buildEmptyMarks(){
       marks = {};
@@ -927,9 +913,181 @@
 
       ensureMarksShape();
       renderGrid();
-      setMessage("Loaded. Local marks kept where present.", false);
+      setMessage("Loaded from this device.", false);
       return true;
     }
+
+    /***********************
+     * CLOUD LIST + PULL
+     ***********************/
+    function clearCloudDropdown(){
+      while(cloudGroupsSelect.options.length > 1){
+        cloudGroupsSelect.remove(1);
+      }
+    }
+
+    async function refreshCloudGroups(){
+      clearMessage();
+      clearCloudDropdown();
+      pullCloudBtn.disabled = true;
+
+      const ok = await checkCloudReachable();
+      if(!ok){
+        setMessage("Cloud not reachable. You can still use local groups.", true);
+        return;
+      }
+
+      setMessage("Loading cloud groups...", false);
+
+      try{
+        const [{ data: evalData, error: evalErr }, { data: courseData, error: courseErr }] =
+          await Promise.all([
+            db.from("evaluations").select("group_name"),
+            db.from("courses").select("group_name,is_closed")
+          ]);
+
+        if(evalErr) console.error(evalErr);
+        if(courseErr) console.error(courseErr);
+
+        const closed = new Set();
+        if(courseData){
+          courseData.forEach(r=>{
+            if(r.group_name && r.is_closed) closed.add(r.group_name);
+          });
+        }
+
+        const set = new Set();
+
+        if(evalData){
+          evalData.forEach(r=>{
+            if(r.group_name && !closed.has(r.group_name)) set.add(r.group_name);
+          });
+        }
+        if(courseData){
+          courseData.forEach(r=>{
+            if(r.group_name && !closed.has(r.group_name)) set.add(r.group_name);
+          });
+        }
+
+        const groups = Array.from(set).sort((a,b)=>a.localeCompare(b));
+
+        groups.forEach(name=>{
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          cloudGroupsSelect.appendChild(opt);
+        });
+
+        if(groups.length === 0){
+          setMessage("No open cloud groups found.", false);
+        }else{
+          setMessage("Cloud groups loaded.", false);
+        }
+      }catch(e){
+        console.error(e);
+        setMessage("Could not load cloud groups.", true);
+      }
+
+      pullCloudBtn.disabled = !cloudGroupsSelect.value;
+    }
+
+    async function pullSelectedCloudGroup(){
+      clearMessage();
+
+      const ok = await checkCloudReachable();
+      if(!ok){
+        setMessage("Cloud not reachable. Cannot pull right now.", true);
+        return;
+      }
+
+      const g = cloudGroupsSelect.value;
+      if(!g){
+        setMessage("Select a cloud group first.", true);
+        return;
+      }
+
+      pullCloudBtn.disabled = true;
+      setMessage("Pulling from cloud...", false);
+
+      try{
+        const { data, error } = await db
+          .from("evaluations")
+          .select("*")
+          .eq("group_name", g);
+
+        if(error){
+          console.error(error);
+          setMessage("Could not pull evaluations from cloud.", true);
+          pullCloudBtn.disabled = false;
+          return;
+        }
+
+        if(!data || data.length === 0){
+          // Still allow you to load group and start marking
+          currentGroup = g;
+          groupNameEl.value = currentGroup;
+          students = parseStudents(studentsInputEl.value);
+          if(students.length === 0){
+            students = [];
+          }
+          marks = {};
+          buildEmptyMarks();
+          saveCurrentGroupLocal("Pulled group (no marks in cloud yet). Saved locally.");
+          renderGrid();
+          pullCloudBtn.disabled = false;
+          return;
+        }
+
+        // Build student list from cloud rows
+        const sSet = new Set();
+        data.forEach(r=>{
+          if(r.student) sSet.add(r.student);
+        });
+        students = Array.from(sSet).sort((a,b)=>a.localeCompare(b));
+
+        currentGroup = g;
+        groupNameEl.value = currentGroup;
+        studentsInputEl.value = students.join(", ");
+
+        // Build marks from cloud
+        marks = {};
+        buildEmptyMarks(); // ensures all tasks exist
+        data.forEach(r=>{
+          const zoneId = Number(r.zone);
+          const task = String(r.task || "");
+          const student = String(r.student || "");
+          const status = String(r.status || "");
+
+          if(!student || !task || !zoneId) return;
+
+          const key = zoneTaskKey(zoneId, task);
+          if(!marks[key]) marks[key] = {};
+          if(students.includes(student)){
+            if(status === "Inc" || status === "Con" || status === "Refi"){
+              marks[key][student] = status;
+            }
+          }
+        });
+
+        ensureMarksShape();
+        saveCurrentGroupLocal("Pulled from cloud and saved on this device.");
+        renderGrid();
+
+        setMessage("Pulled from cloud. You can continue marking on this device.", false);
+      }catch(e){
+        console.error(e);
+        setMessage("Pull failed. Check your Supabase policies and connection.", true);
+      }finally{
+        pullCloudBtn.disabled = !cloudGroupsSelect.value;
+      }
+    }
+
+    cloudGroupsSelect.addEventListener("change", ()=>{
+      pullCloudBtn.disabled = !cloudGroupsSelect.value || !onlineState;
+    });
+
+    refreshCloudBtn.addEventListener("click", refreshCloudGroups);
+    pullCloudBtn.addEventListener("click", pullSelectedCloudGroup);
 
     /***********************
      * SUPABASE SYNC
@@ -992,7 +1150,6 @@
           }
         }
 
-        setMessage("Synced to cloud.", false);
         syncingNow = false;
         setOnlineBanner(true, "Synced");
       }catch(e){
@@ -1134,8 +1291,12 @@
       await checkCloudReachable();
     }
 
+    /***********************
+     * INIT
+     ***********************/
     (async function init(){
       refreshSavedGroupsDropdown();
+      clearCloudDropdown();
       setOnlineBanner(false, "Checking...");
       await checkCloudReachable();
       setInterval(heartbeat, 12000);
