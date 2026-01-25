@@ -9,16 +9,16 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       padding: 16px;
       background: #f4f6f8;
+      margin: 0;
     }
 
-    h1 {
-      margin-bottom: 4px;
-    }
+    h1 { margin-bottom: 4px; }
 
     .small {
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       color: #555;
       margin-bottom: 12px;
+      max-width: 1100px;
     }
 
     .controls {
@@ -29,25 +29,25 @@
       align-items: center;
     }
 
-    label {
-      font-size: 0.9rem;
-    }
+    label { font-size: 0.95rem; font-weight: 700; }
 
     select {
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 6px 10px;
+      border-radius: 8px;
       border: 1px solid #ccc;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
+      background: #fff;
     }
 
     button {
-      padding: 6px 10px;
-      border-radius: 4px;
+      padding: 8px 12px;
+      border-radius: 10px;
       border: 1px solid #0b6b2f;
       background: #0f9d3d;
       color: white;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
+      font-weight: 800;
     }
 
     button.secondary {
@@ -60,226 +60,83 @@
       border-color: #8e0000;
     }
 
-    button:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
+    button:disabled { opacity: 0.6; cursor: default; }
 
-    #courseStatus {
-      font-size: 0.9rem;
-    }
+    #courseStatus { font-size: 0.95rem; font-weight: 900; }
+    #courseStatus.open { color: #1b5e20; }
+    #courseStatus.closed { color: #c62828; }
 
-    #courseStatus.open {
-      color: #1b5e20;
-      font-weight: 600;
-    }
+    #statusMsg { margin-top: 6px; font-size: 0.9rem; font-weight: 800; }
+    #statusMsg.error { color: #b00020; }
+    #statusMsg.success { color: #1b5e20; }
 
-    #courseStatus.closed {
-      color: #c62828;
-      font-weight: 600;
-    }
-
-    #statusMsg {
-      margin-top: 4px;
-      font-size: 0.9rem;
-      color: #444;
-      min-height: 1.2em;
-    }
-
-    #statusMsg.error {
-      color: #b00020;
-    }
-
-    #statusMsg.success {
-      color: #1b5e20;
-    }
-
-    #summaryContainer {
-      margin-top: 16px;
-    }
+    #summaryContainer { margin-top: 16px; max-width: 1100px; }
 
     .summary-card {
       background: white;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 16px;
       border: 1px solid #ccc;
       margin-bottom: 16px;
     }
 
-    .summary-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
+    .summary-title { font-size: 1.1rem; font-weight: 900; margin-bottom: 8px; }
 
-    .summary-pass {
-      color: #1b5e20;
-      font-weight: 600;
-    }
+    .summary-pass { color: #1b5e20; font-weight: 900; }
+    .summary-fail { color: #c62828; font-weight: 900; }
 
-    .summary-fail {
-      color: #c62828;
-      font-weight: 600;
-    }
+    .summary-line { margin-top: 4px; font-size: 0.95rem; }
 
-    .summary-line {
-      margin-top: 4px;
-      font-size: 0.9rem;
-    }
-
-    #tableContainer {
-      margin-top: 16px;
-      overflow-x: auto;
-    }
+    #tableContainer { margin-top: 16px; overflow-x: auto; }
 
     table {
       border-collapse: collapse;
       width: 100%;
       background: white;
-      min-width: 700px;
+      min-width: 900px;
+      table-layout: fixed;
     }
 
     th, td {
       border: 1px solid #999;
-      padding: 6px 6px;
-      font-size: 0.85rem;
+      padding: 8px 6px;
+      font-size: 0.9rem;
       text-align: left;
       vertical-align: top;
-      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
-    th {
-      background: #e0e0e0;
-    }
+    th { background: #e0e0e0; }
 
-    .status-inc {
-      background: #ffebee;
-    }
+    .status-inc { background: #ffebee; }
+    .status-con { background: #fffde7; }
+    .status-refi { background: #e8f5e9; }
 
-    .status-con {
-      background: #fffde7;
-    }
+    .zone-cell { text-align: center; width: 90px; }
 
-    .status-refi {
-      background: #e8f5e9;
-    }
+    .col-group { width: 210px; }
+    .col-student { width: 170px; }
+    .col-task { width: auto; }
+    .col-status { width: 140px; }
 
-    .zone-cell {
-      text-align: center;
-      width: 70px;
-      white-space: nowrap;
-    }
+    @media print {
+      .controls, #statusMsg { display: none !important; }
+      body { background: white; padding: 0; }
 
-    @media (max-width: 900px) {
-      table {
-        font-size: 0.75rem;
-      }
-      th, td {
-        padding: 4px 4px;
-      }
-    }
-
-    /* Print report header used in "Print all students" */
-    .report-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: baseline;
-      margin: 0 0 8px 0;
-    }
-
-    .report-header .title {
-      font-size: 16pt;
-      font-weight: 800;
-      margin: 0;
-    }
-
-    .report-header .meta {
-      font-size: 10pt;
-      color: #333;
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    .report-subheader {
-      font-size: 11pt;
-      margin: 0 0 10px 0;
-      color: #111;
-    }
-
-   /* Print: hide controls, keep summary and table */
-@media print {
-
-  .controls,
-  #statusMsg {
-    display: none !important;
-  }
-
-  /* Force browsers to print background colors */
-  * {
-    -webkit-print-color-adjust: exact !important; /* Chrome / Safari */
-    print-color-adjust: exact !important;         /* Modern spec */
-  }
-
-  body {
-    background: white;
-    padding: 0;
-  }
-
-  #summaryContainer,
-  #tableContainer {
-    margin-top: 0;
-  }
-}
-
-      /* When printing all students, hide the on-screen header to avoid duplication */
-      body.printing-all #screenHeader {
-        display: none !important;
-      }
-
-      /* Make printed tables fit page and avoid cutting Status column */
-      table {
-        width: 100% !important;
-        min-width: 0 !important;
-        table-layout: fixed;
-      }
-
-      th, td {
-        font-size: 10pt;
-        padding: 6px 6px;
-      }
-
-      /* Give Status a bit more room */
-      th.col-status, td.col-status {
-        width: 140px;
-      }
-
-      /* These help prevent Safari truncation */
-      td, th {
-        overflow: visible;
-        word-break: break-word;
-        hyphens: auto;
-      }
-
-      /* Optional page break handling for the "print all" pages */
-      .print-page {
-        page-break-after: always;
-        padding: 16px;
-      }
-
-      .print-page:last-child {
-        page-break-after: auto;
+      /* Keep colors in print */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
     }
   </style>
 </head>
 <body>
-  <!-- Wrapped so we can hide it only when printing all students -->
-  <div id="screenHeader">
-    <h1>Snowboard Assessment</h1>
-    <div class="small">
-      To pass, a participant must have at least Consistent in every zone (no Inconsistent in any zone).
-    </div>
+  <h1>Snowboard Assessment - Admin</h1>
+  <div class="small">
+    View results per group, filter by participant, close or reopen courses, and export.
+    Status names use the long form: Inconsistent, Consistent, Refined.
+    To pass, a participant must have at least Consistent in every zone (no Inconsistent in any zone).
   </div>
 
   <div class="controls">
@@ -301,7 +158,6 @@
 
     <button id="exportCsvBtn" class="secondary" disabled>Export CSV (group)</button>
     <button id="printBtn" class="secondary" disabled>Print / PDF current student</button>
-    <button id="printAllBtn" class="secondary" disabled>Print / PDF all students</button>
   </div>
 
   <div class="controls">
@@ -310,20 +166,16 @@
   </div>
 
   <div id="statusMsg"></div>
-
   <div id="summaryContainer"></div>
   <div id="tableContainer"></div>
 
-  <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Supabase configuration
     const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
     const SUPABASE_ANON_KEY =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
 
-    // IMPORTANT: do not name this variable "supabase" because the library also uses window.supabase
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const groupSelect = document.getElementById("groupSelect");
     const loadGroupBtn = document.getElementById("loadGroupBtn");
@@ -335,22 +187,18 @@
     const studentSelect = document.getElementById("studentSelect");
     const exportCsvBtn = document.getElementById("exportCsvBtn");
     const printBtn = document.getElementById("printBtn");
-    const printAllBtn = document.getElementById("printAllBtn");
 
     let currentGroup = null;
     let currentIsClosed = false;
     let currentData = [];
     let currentStudentFilter = "ALL";
+    let participantOrder = []; // from participant_map participants[].label
 
     function setMessage(text, isError = false) {
       statusMsg.textContent = text;
       statusMsg.className = isError ? "error" : "success";
     }
-
-    function clearMessage() {
-      statusMsg.textContent = "";
-      statusMsg.className = "";
-    }
+    function clearMessage() { statusMsg.textContent = ""; statusMsg.className = ""; }
 
     function mapStatusLong(short) {
       if (short === "Inc") return "Inconsistent";
@@ -358,7 +206,6 @@
       if (short === "Refi") return "Refined";
       return short;
     }
-
     function statusClass(short) {
       if (short === "Inc") return "status-inc";
       if (short === "Con") return "status-con";
@@ -368,54 +215,26 @@
 
     async function loadGroupList() {
       clearMessage();
-
       try {
-        const [{ data: evalData, error: evalError }, { data: courseData, error: courseError }] =
-          await Promise.all([
-            supabaseClient.from("evaluations").select("group_name"),
-            supabaseClient.from("courses").select("group_name, is_closed")
-          ]);
+        const { data: courseData, error: courseError } = await db
+          .from("courses")
+          .select("group_name, is_closed")
+          .order("group_name", { ascending: true });
 
-        if (evalError) console.error(evalError);
-        if (courseError) console.error(courseError);
+        if (courseError) throw courseError;
 
-        const groupsSet = new Set();
+        while (groupSelect.options.length > 1) groupSelect.remove(1);
 
-        if (evalData) {
-          evalData.forEach(row => {
-            if (row.group_name) groupsSet.add(row.group_name);
-          });
-        }
-
-        if (courseData) {
-          courseData.forEach(row => {
-            if (row.group_name) groupsSet.add(row.group_name);
-          });
-        }
-
-        const closedMap = new Map();
-        if (courseData) {
-          courseData.forEach(row => {
-            closedMap.set(row.group_name, !!row.is_closed);
-          });
-        }
-
-        const groups = Array.from(groupsSet).sort((a, b) => a.localeCompare(b));
-
-        while (groupSelect.options.length > 1) {
-          groupSelect.remove(1);
-        }
-
-        groups.forEach(name => {
+        (courseData || []).forEach(row => {
+          if (!row.group_name) return;
           const opt = document.createElement("option");
-          const isClosed = closedMap.get(name);
-          opt.value = name;
-          opt.textContent = isClosed ? name + " (closed)" : name;
+          opt.value = row.group_name;
+          opt.textContent = row.is_closed ? row.group_name + " (closed)" : row.group_name;
           groupSelect.appendChild(opt);
         });
       } catch (e) {
         console.error(e);
-        setMessage("Could not load group list. Check console for details.", true);
+        setMessage("Could not load group list.", true);
       }
     }
 
@@ -423,26 +242,34 @@
       courseStatusSpan.textContent = "Status: loading...";
       courseStatusSpan.className = "";
 
-      const { data, error } = await supabaseClient
+      const { data, error } = await db
         .from("courses")
-        .select("is_closed")
+        .select("is_closed, participant_map")
         .eq("group_name", groupName)
         .maybeSingle();
 
-      // PGRST116 is "Results contain 0 rows" for maybeSingle
       if (error && error.code !== "PGRST116") {
         console.error(error);
         courseStatusSpan.textContent = "Status: unknown";
-        courseStatusSpan.className = "";
         toggleCourseBtn.disabled = false;
         toggleCourseBtn.textContent = "Close course";
         toggleCourseBtn.className = "secondary";
         currentIsClosed = false;
+        participantOrder = [];
         return;
       }
 
       const isClosed = data ? !!data.is_closed : false;
       currentIsClosed = isClosed;
+
+      // participant_map ordering (if present)
+      participantOrder = [];
+      const pm = data?.participant_map;
+      if (pm && Array.isArray(pm.participants)) {
+        participantOrder = pm.participants
+          .map(p => p.label)
+          .filter(Boolean);
+      }
 
       if (isClosed) {
         courseStatusSpan.textContent = "Status: Closed";
@@ -466,13 +293,8 @@
 
       const newClosed = !currentIsClosed;
 
-      const { error } = await supabaseClient.from("courses").upsert(
-        [
-          {
-            group_name: currentGroup,
-            is_closed: newClosed
-          }
-        ],
+      const { error } = await db.from("courses").upsert(
+        [{ group_name: currentGroup, is_closed: newClosed }],
         { onConflict: "group_name" }
       );
 
@@ -497,40 +319,33 @@
 
     function renderSummary() {
       summaryContainer.innerHTML = "";
+      if (currentStudentFilter === "ALL") return;
 
-      if (currentStudentFilter === "ALL") {
-        return;
-      }
-
-      const rows = currentData.filter(row => row.student === currentStudentFilter);
-      if (rows.length === 0) return;
+      const rows = currentData.filter(r => r.student === currentStudentFilter);
+      if (!rows.length) return;
 
       const groupName = rows[0].group_name;
       const student = rows[0].student;
 
       const zoneMap = new Map();
-      rows.forEach(row => {
-        const z = row.zone;
-        if (!zoneMap.has(z)) {
-          zoneMap.set(z, { Inc: 0, Con: 0, Refi: 0 });
-        }
-        const counts = zoneMap.get(z);
-        if (row.status === "Inc") counts.Inc += 1;
-        else if (row.status === "Con") counts.Con += 1;
-        else if (row.status === "Refi") counts.Refi += 1;
+      rows.forEach(r => {
+        const z = r.zone;
+        if (!zoneMap.has(z)) zoneMap.set(z, { Inc: 0, Con: 0, Refi: 0 });
+        const c = zoneMap.get(z);
+        if (r.status === "Inc") c.Inc++;
+        else if (r.status === "Con") c.Con++;
+        else if (r.status === "Refi") c.Refi++;
       });
 
-      const zoneSummaries = [];
       let overallPass = true;
+      const zoneSummaries = [];
 
-      Array.from(zoneMap.keys())
-        .sort((a, b) => a - b)
-        .forEach(zone => {
-          const c = zoneMap.get(zone);
-          const zonePass = c.Inc === 0 && (c.Con > 0 || c.Refi > 0);
-          if (!zonePass) overallPass = false;
-          zoneSummaries.push({ zone, counts: c, pass: zonePass });
-        });
+      Array.from(zoneMap.keys()).sort((a,b)=>a-b).forEach(z => {
+        const c = zoneMap.get(z);
+        const pass = c.Inc === 0 && (c.Con > 0 || c.Refi > 0);
+        if (!pass) overallPass = false;
+        zoneSummaries.push({ zone: z, counts: c, pass });
+      });
 
       const card = document.createElement("div");
       card.className = "summary-card";
@@ -540,44 +355,33 @@
       title.textContent = "Participant summary";
       card.appendChild(title);
 
-      const lineGroup = document.createElement("div");
-      lineGroup.className = "summary-line";
-      lineGroup.innerHTML = "Group: <strong>" + groupName + "</strong>";
-      card.appendChild(lineGroup);
+      const l1 = document.createElement("div");
+      l1.className = "summary-line";
+      l1.innerHTML = "Group: <strong>" + groupName + "</strong>";
+      card.appendChild(l1);
 
-      const lineStudent = document.createElement("div");
-      lineStudent.className = "summary-line";
-      lineStudent.innerHTML = "Student: <strong>" + student + "</strong>";
-      card.appendChild(lineStudent);
+      const l2 = document.createElement("div");
+      l2.className = "summary-line";
+      l2.innerHTML = "Student: <strong>" + student + "</strong>";
+      card.appendChild(l2);
 
-      const lineRule = document.createElement("div");
-      lineRule.className = "summary-line";
-      lineRule.innerHTML = 'To pass, the participant must have minimum <strong>Consistent</strong> in all zones.';
-      card.appendChild(lineRule);
+      const l3 = document.createElement("div");
+      l3.className = "summary-line";
+      l3.innerHTML = "To pass, the participant must have minimum <strong>Consistent</strong> in all zones.";
+      card.appendChild(l3);
 
-      const lineOverall = document.createElement("div");
-      lineOverall.className = "summary-line " + (overallPass ? "summary-pass" : "summary-fail");
-      lineOverall.innerHTML = overallPass
+      const l4 = document.createElement("div");
+      l4.className = "summary-line " + (overallPass ? "summary-pass" : "summary-fail");
+      l4.textContent = overallPass
         ? "Overall result: PASSED. Participant has at least Consistent in all zones."
         : "Overall result: NOT YET. Participant needs at least Consistent in all zones.";
-      card.appendChild(lineOverall);
+      card.appendChild(l4);
 
       zoneSummaries.forEach(zs => {
-        const l = document.createElement("div");
-        l.className = "summary-line";
-        const statusText = zs.pass ? "Pass" : "Not yet";
-        l.textContent =
-          "Zone " +
-          zs.zone +
-          ": Inc " +
-          zs.counts.Inc +
-          ", Con " +
-          zs.counts.Con +
-          ", Refi " +
-          zs.counts.Refi +
-          " - " +
-          statusText;
-        card.appendChild(l);
+        const ln = document.createElement("div");
+        ln.className = "summary-line";
+        ln.textContent = `Zone ${zs.zone}: Inc ${zs.counts.Inc}, Con ${zs.counts.Con}, Refi ${zs.counts.Refi} - ${zs.pass ? "Pass" : "Not yet"}`;
+        card.appendChild(ln);
       });
 
       summaryContainer.appendChild(card);
@@ -586,34 +390,40 @@
     function renderTable() {
       const rows = getFilteredData();
 
-      if (!rows || rows.length === 0) {
+      if (!rows.length) {
         tableContainer.innerHTML = "<p>No evaluations found for this selection.</p>";
         return;
       }
 
       let html = "<table>";
       html += "<tr>" +
-        "<th>Group</th>" +
-        "<th>Student</th>" +
+        "<th class='col-group'>Group</th>" +
+        "<th class='col-student'>Student</th>" +
         "<th class='zone-cell'>Zone</th>" +
-        "<th>Task</th>" +
+        "<th class='col-task'>Task</th>" +
         "<th class='col-status'>Status</th>" +
-        "</tr>";
+      "</tr>";
 
-      rows.forEach(row => {
-        const longStatus = mapStatusLong(row.status);
-        const cls = statusClass(row.status);
-        html += "<tr>" +
-          "<td>" + escapeHtml(row.group_name) + "</td>" +
-          "<td>" + escapeHtml(row.student) + "</td>" +
-          "<td class='zone-cell'>Zone " + escapeHtml(String(row.zone)) + "</td>" +
-          "<td>" + escapeHtml(row.task) + "</td>" +
-          "<td class='col-status " + cls + "'>" + escapeHtml(longStatus) + "</td>" +
-          "</tr>";
+      rows.forEach(r => {
+        const longStatus = mapStatusLong(r.status);
+        const cls = statusClass(r.status);
+        html += `<tr>
+          <td class="col-group">${escapeHtml(r.group_name)}</td>
+          <td class="col-student">${escapeHtml(r.student)}</td>
+          <td class="zone-cell">Zone ${r.zone}</td>
+          <td class="col-task">${escapeHtml(r.task)}</td>
+          <td class="col-status ${cls}">${escapeHtml(longStatus)}</td>
+        </tr>`;
       });
 
       html += "</table>";
       tableContainer.innerHTML = html;
+    }
+
+    function escapeHtml(s){
+      return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[c]));
     }
 
     async function loadGroupData() {
@@ -628,26 +438,20 @@
 
       tableContainer.innerHTML = "";
       summaryContainer.innerHTML = "";
-
       toggleCourseBtn.disabled = true;
       studentSelect.disabled = true;
       exportCsvBtn.disabled = true;
       printBtn.disabled = true;
-      printAllBtn.disabled = true;
-
       studentSelect.innerHTML = '<option value="ALL">All students</option>';
       currentStudentFilter = "ALL";
       currentData = [];
 
       setMessage("Loading group data...");
 
-      const { data, error } = await supabaseClient
+      const { data, error } = await db
         .from("evaluations")
         .select("*")
-        .eq("group_name", groupName)
-        .order("student", { ascending: true })
-        .order("zone", { ascending: true })
-        .order("task", { ascending: true });
+        .eq("group_name", groupName);
 
       if (error) {
         console.error(error);
@@ -657,25 +461,47 @@
 
       await loadCourseStatus(groupName);
 
-      if (!data || data.length === 0) {
+      if (!data || !data.length) {
         tableContainer.innerHTML = "<p>No evaluations found for this group.</p>";
         setMessage("Loaded, but no data for this group.");
-        exportCsvBtn.disabled = true;
-        printBtn.disabled = true;
-        printAllBtn.disabled = true;
         return;
       }
 
+      // Sort by participant_map if we have it
+      const orderIndex = new Map();
+      participantOrder.forEach((name, idx) => orderIndex.set(name, idx));
+
+      data.sort((a,b) => {
+        const ai = orderIndex.has(a.student) ? orderIndex.get(a.student) : 9999;
+        const bi = orderIndex.has(b.student) ? orderIndex.get(b.student) : 9999;
+        if (ai !== bi) return ai - bi;
+        if (a.zone !== b.zone) return a.zone - b.zone;
+        return String(a.task).localeCompare(String(b.task));
+      });
+
       currentData = data.slice();
 
-      // Build student list
-      const studentsSet = new Set();
-      currentData.forEach(row => {
-        if (row.student) studentsSet.add(row.student);
-      });
-      const students = Array.from(studentsSet).sort((a, b) => a.localeCompare(b));
+      // Build student list in correct order
+      const seen = new Set();
+      const orderedStudents = [];
 
-      students.forEach(name => {
+      // from participant_map first
+      participantOrder.forEach(s => {
+        if (!seen.has(s) && currentData.some(r => r.student === s)) {
+          seen.add(s);
+          orderedStudents.push(s);
+        }
+      });
+
+      // any extras
+      currentData.forEach(r => {
+        if (r.student && !seen.has(r.student)) {
+          seen.add(r.student);
+          orderedStudents.push(r.student);
+        }
+      });
+
+      orderedStudents.forEach(name => {
         const opt = document.createElement("option");
         opt.value = name;
         opt.textContent = name;
@@ -685,11 +511,9 @@
       studentSelect.disabled = false;
       exportCsvBtn.disabled = false;
       printBtn.disabled = (studentSelect.value === "ALL");
-      printAllBtn.disabled = false;
 
       renderSummary();
       renderTable();
-
       setMessage("Group data loaded.");
     }
 
@@ -707,41 +531,31 @@
       }
 
       const headers = ["group_name", "student", "zone", "task", "status"];
-      const lines = [];
-      lines.push(headers.join(","));
+      const lines = [headers.join(",")];
 
-      currentData.forEach(row => {
-        const rowObj = {
-          group_name: row.group_name,
-          student: row.student,
-          zone: row.zone,
-          task: row.task,
-          status: mapStatusLong(row.status)
-        };
-
-        const values = headers.map(h => {
-          let val = rowObj[h];
-          if (val == null) val = "";
-          val = String(val).replace(/"/g, '""');
-          if (val.search(/[",\n]/) !== -1) {
-            val = '"' + val + '"';
-          }
-          return val;
+      currentData.forEach(r => {
+        const row = [
+          r.group_name,
+          r.student,
+          r.zone,
+          r.task,
+          mapStatusLong(r.status)
+        ].map(v => {
+          const s = String(v ?? "").replace(/"/g,'""');
+          return (/[",\n]/.test(s)) ? `"${s}"` : s;
         });
-
-        lines.push(values.join(","));
+        lines.push(row.join(","));
       });
 
-      const csvContent = lines.join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "snowboard_assessment_admin_" + currentGroup.replace(/\s+/g, "_") + ".csv";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `snowboard_assessment_admin_${currentGroup.replace(/\s+/g, "_")}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
       setMessage("CSV exported for this group.");
@@ -755,191 +569,11 @@
       window.print();
     }
 
-    // Build a full printable document containing one page per student
-    function buildPrintAllHtmlForGroup(groupName, rows) {
-      const studentsSet = new Set();
-      rows.forEach(r => {
-        if (r.student) studentsSet.add(r.student);
-      });
-      const students = Array.from(studentsSet).sort((a, b) => a.localeCompare(b));
-
-      const nowStr = new Date().toLocaleString();
-
-      const pages = students.map(studentName => {
-        const studentRows = rows.filter(r => r.student === studentName);
-
-        const summaryHtml = buildSummaryHtml(groupName, studentName, studentRows);
-        const tableHtml = buildTableHtml(groupName, studentName, studentRows);
-
-        return `
-          <div class="print-page">
-            <div class="report-header">
-              <div class="title">Snowboard Assessment Report</div>
-              <div class="meta">${escapeHtml(nowStr)}</div>
-            </div>
-
-            <div class="report-subheader">
-              <strong>Group:</strong> ${escapeHtml(groupName)} &nbsp; | &nbsp;
-              <strong>Student:</strong> ${escapeHtml(studentName)}
-            </div>
-
-            ${summaryHtml}
-            ${tableHtml}
-          </div>
-        `;
-      });
-
-      // Copy current CSS from this page so print window matches layout
-      const cssText = Array.from(document.styleSheets)
-        .map(ss => {
-          try {
-            return Array.from(ss.cssRules).map(r => r.cssText).join("\n");
-          } catch {
-            return "";
-          }
-        })
-        .join("\n");
-
-      return `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <title>Snowboard Assessment Reports</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <style>${cssText}</style>
-        </head>
-        <body class="printing-all">
-          ${pages.join("\n")}
-        </body>
-        </html>
-      `;
-    }
-
-    function buildSummaryHtml(groupName, studentName, rows) {
-      if (!rows || rows.length === 0) return "";
-
-      const zoneMap = new Map();
-      rows.forEach(row => {
-        const z = row.zone;
-        if (!zoneMap.has(z)) {
-          zoneMap.set(z, { Inc: 0, Con: 0, Refi: 0 });
-        }
-        const counts = zoneMap.get(z);
-        if (row.status === "Inc") counts.Inc += 1;
-        else if (row.status === "Con") counts.Con += 1;
-        else if (row.status === "Refi") counts.Refi += 1;
-      });
-
-      const zoneSummaries = [];
-      let overallPass = true;
-
-      Array.from(zoneMap.keys())
-        .sort((a, b) => a - b)
-        .forEach(zone => {
-          const c = zoneMap.get(zone);
-          const zonePass = c.Inc === 0 && (c.Con > 0 || c.Refi > 0);
-          if (!zonePass) overallPass = false;
-          zoneSummaries.push({ zone, counts: c, pass: zonePass });
-        });
-
-      const overallLine = overallPass
-        ? `<div class="summary-line summary-pass">Overall result: PASSED. Participant has at least Consistent in all zones.</div>`
-        : `<div class="summary-line summary-fail">Overall result: NOT YET. Participant needs at least Consistent in all zones.</div>`;
-
-      const zoneLines = zoneSummaries.map(zs => {
-        const statusText = zs.pass ? "Pass" : "Not yet";
-        return `<div class="summary-line">Zone ${escapeHtml(String(zs.zone))}: Inc ${zs.counts.Inc}, Con ${zs.counts.Con}, Refi ${zs.counts.Refi} - ${escapeHtml(statusText)}</div>`;
-      }).join("");
-
-      return `
-        <div class="summary-card">
-          <div class="summary-title">Participant summary</div>
-          <div class="summary-line">Group: <strong>${escapeHtml(groupName)}</strong></div>
-          <div class="summary-line">Student: <strong>${escapeHtml(studentName)}</strong></div>
-          <div class="summary-line">To pass, the participant must have minimum <strong>Consistent</strong> in all zones.</div>
-          ${overallLine}
-          ${zoneLines}
-        </div>
-      `;
-    }
-
-    function buildTableHtml(groupName, studentName, rows) {
-      if (!rows || rows.length === 0) return "<p>No evaluations found.</p>";
-
-      const sorted = rows.slice().sort((a, b) => {
-        const sa = String(a.zone) + "||" + String(a.task);
-        const sb = String(b.zone) + "||" + String(b.task);
-        return sa.localeCompare(sb);
-      });
-
-      let html = "<table>";
-      html += "<tr>" +
-        "<th>Group</th>" +
-        "<th>Student</th>" +
-        "<th class='zone-cell'>Zone</th>" +
-        "<th>Task</th>" +
-        "<th class='col-status'>Status</th>" +
-        "</tr>";
-
-      sorted.forEach(row => {
-        const longStatus = mapStatusLong(row.status);
-        const cls = statusClass(row.status);
-        html += "<tr>" +
-          "<td>" + escapeHtml(groupName) + "</td>" +
-          "<td>" + escapeHtml(studentName) + "</td>" +
-          "<td class='zone-cell'>Zone " + escapeHtml(String(row.zone)) + "</td>" +
-          "<td>" + escapeHtml(row.task) + "</td>" +
-          "<td class='col-status " + cls + "'>" + escapeHtml(longStatus) + "</td>" +
-          "</tr>";
-      });
-
-      html += "</table>";
-      return html;
-    }
-
-    function printAllStudents() {
-      if (!currentGroup || currentData.length === 0) {
-        setMessage("Load a group first.", true);
-        return;
-      }
-
-      const html = buildPrintAllHtmlForGroup(currentGroup, currentData);
-
-      const w = window.open("", "_blank");
-      if (!w) {
-        setMessage("Popup blocked. Allow popups to print all students.", true);
-        return;
-      }
-
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-
-      w.focus();
-
-      // Give the browser a moment to render before printing (helps Safari)
-      setTimeout(() => {
-        w.print();
-      }, 300);
-    }
-
-    function escapeHtml(str) {
-      if (str == null) return "";
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-    }
-
     loadGroupBtn.addEventListener("click", loadGroupData);
     toggleCourseBtn.addEventListener("click", toggleCourseStatus);
     studentSelect.addEventListener("change", onStudentChange);
     exportCsvBtn.addEventListener("click", exportCsv);
     printBtn.addEventListener("click", printCurrent);
-    printAllBtn.addEventListener("click", printAllStudents);
 
     loadGroupList();
   </script>
