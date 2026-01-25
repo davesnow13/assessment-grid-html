@@ -12,354 +12,444 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-      :root {
-        --border: #111;
-        --bg: #f4f6f8;
+  :root {
+    --border: #111;
+    --bg: #f4f6f8;
 
-        --incBg: #f8e6e8; /* light red */
-        --conBg: #f7f2dc; /* light yellow */
-        --refBg: #e5f3e6; /* light green */
+    --incBg: #f8e6e8; /* light red */
+    --conBg: #f7f2dc; /* light yellow */
+    --refBg: #e5f3e6; /* light green */
 
-        --btnGreen: #2f6b2f;
-        --btnDark: #4b4f55;
+    --btnGreen: #2f6b2f;
+    --btnDark: #4b4f55;
 
-        --taskColW: clamp(170px, 38vw, 320px);
-        --cellW: 54px; /* min width of each Inc/Con/Refi cell */
-        --studentHeaderW: calc(var(--cellW) * 3);
-      }
+    /* Layout sizing */
+    --taskColW: clamp(160px, 34vw, 280px); /* smaller than before for portrait */
+    --cellW: 54px; /* width of each Inc/Con/Refi cell */
+    --studentHeaderW: calc(var(--cellW) * 3);
 
-      body {
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-        background: var(--bg);
-        margin: 16px;
-        color: #111;
-      }
+    /* Sticky header heights (match actual rendered header heights) */
+    --theadRow1H: 56px; /* "1 Albert" row */
+    --theadRow2H: 48px; /* "Inc Con Refi" row */
+  }
 
-      h1 {
-        margin: 0 0 6px;
-        font-size: 44px;
-        letter-spacing: -0.5px;
-      }
-      .sub {
-        margin: 0 0 14px;
-        color: #333;
-        font-size: 16px;
-      }
+  body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: var(--bg);
+    margin: 16px;
+    color: #111;
+  }
 
-      .controls {
-        display: grid;
-        grid-template-columns: 1fr 1fr auto auto auto;
-        gap: 10px 14px;
-        align-items: center;
-        max-width: 1200px;
-      }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 44px;
+    letter-spacing: -0.5px;
+  }
 
-      .controls label {
-        display: grid;
-        gap: 6px;
-        font-weight: 700;
-      }
+  .sub {
+    margin: 0 0 14px;
+    color: #333;
+    font-size: 16px;
+  }
 
-      input[type="text"] {
-        padding: 10px 12px;
-        border-radius: 8px;
-        border: 2px solid #c9d1d9;
-        background: #fff;
-        font-size: 16px;
-      }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto auto auto;
+    gap: 10px 14px;
+    align-items: center;
+    max-width: 1200px;
+  }
 
-      select {
-        padding: 10px 12px;
-        border-radius: 8px;
-        border: 2px solid #c9d1d9;
-        background: #fff;
-        font-size: 16px;
-        width: 100%;
-      }
+  .controls label {
+    display: grid;
+    gap: 6px;
+    font-weight: 700;
+  }
 
-      .btn {
-        border: none;
-        border-radius: 10px;
-        padding: 12px 16px;
-        font-size: 18px;
-        font-weight: 800;
-        color: #fff;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      .btn.green {
-        background: var(--btnGreen);
-      }
-      .btn.dark {
-        background: var(--btnDark);
-      }
+  input[type="text"] {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 2px solid #c9d1d9;
+    background: #fff;
+    font-size: 16px;
+  }
 
-      .row2 {
-        display: grid;
-        grid-template-columns: 1fr auto auto;
-        gap: 10px 14px;
-        align-items: end;
-        max-width: 1200px;
-        margin-top: 10px;
-      }
+  select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 2px solid #c9d1d9;
+    background: #fff;
+    font-size: 16px;
+    width: 100%;
+  }
 
-      .status {
-        margin-top: 12px;
-        border: 2px solid #c9d1d9;
-        border-radius: 10px;
-        padding: 12px 14px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: #fff;
-      }
-      .statusLeft {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        font-weight: 800;
-        font-size: 20px;
-      }
-      .dot {
-        width: 18px;
-        height: 18px;
-        border-radius: 999px;
-        background: #999;
-      }
-      .dot.online {
-        background: #2ea043;
-      }
-      .dot.offline {
-        background: #d1242f;
-      }
-      .statusRight {
-        font-weight: 900;
-        font-size: 22px;
-        color: #b45309;
-      }
-      .statusRight.ok {
-        color: #2f6b2f;
-      }
-      .statusRight.bad {
-        color: #b91c1c;
-      }
+  .btn {
+    border: none;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+  }
 
-      hr.rule {
-        border: none;
-        border-top: 6px solid #111;
-        margin: 14px 0;
-      }
+  .btn.green {
+    background: var(--btnGreen);
+  }
 
-      /* Grid wrapper: allow horizontal scroll instead of squeezing */
-      .gridWrap {
-        width: 100%;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        border-top: 4px solid #111;
-        padding-top: 0;
-      }
+  .btn.dark {
+    background: var(--btnDark);
+  }
 
-      table.grid {
-        border-collapse: collapse;
-        background: #fff;
-        /* Key: prevent squeeze. Let table be as wide as needed. */
-        width: max-content;
-        min-width: 100%;
-      }
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px 14px;
+    align-items: end;
+    max-width: 1200px;
+    margin-top: 10px;
+  }
 
-      th,
-      td {
-        border: 4px solid var(--border);
-        padding: 10px 10px;
-        vertical-align: middle;
-      }
+  .status {
+    margin-top: 12px;
+    border: 2px solid #c9d1d9;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+  }
 
-      th {
-        background: #efefef;
-        font-weight: 900;
-        text-align: center;
-      }
+  .statusLeft {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-weight: 800;
+    font-size: 20px;
+  }
 
-      /* Task column */
-      th.taskHead,
-      td.taskCell,
-      td.zoneCell {
-        width: var(--taskColW);
-        min-width: var(--taskColW);
-        max-width: var(--taskColW);
-        text-align: left;
-      }
+  .dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: #999;
+  }
 
-      td.taskCell {
-        font-size: 22px;
-        line-height: 1.15;
-      }
+  .dot.online {
+    background: #2ea043;
+  }
 
-      /* Student header group cell (spans 3) */
-      th.studentHead {
-        min-width: var(--studentHeaderW);
-        width: var(--studentHeaderW);
-        font-size: 28px;
-      }
+  .dot.offline {
+    background: #d1242f;
+  }
 
-      th.subHead {
-        font-size: 20px;
-        padding: 8px 0;
-        min-width: var(--cellW);
-        width: var(--cellW);
-      }
+  .statusRight {
+    font-weight: 900;
+    font-size: 22px;
+    color: #b45309;
+  }
 
-      td.markCell {
-        min-width: var(--cellW);
-        width: var(--cellW);
-        padding: 10px 6px;
-        text-align: center;
-      }
+  .statusRight.ok {
+    color: #2f6b2f;
+  }
 
-      /* Backgrounds by column */
-      .bgInc {
-        background: var(--incBg);
-      }
-      .bgCon {
-        background: var(--conBg);
-      }
-      .bgRefi {
-        background: var(--refBg);
-      }
+  .statusRight.bad {
+    color: #b91c1c;
+  }
 
-      /* The clickable square */
-      .box {
-        width: 46px;
-        height: 46px;
-        border-radius: 10px;
-        border: 3px solid #9aa4af;
-        background: #e9edf1;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 28px;
-        font-weight: 1000;
-        color: #111;
-        user-select: none;
-        cursor: pointer;
-      }
+  hr.rule {
+    border: none;
+    border-top: 6px solid #111;
+    margin: 14px 0;
+  }
 
-      /* Checked states use slightly stronger fill that matches column */
-      .checked.bgInc .box {
-        background: #e56a72;
-        border-color: #b34149;
-        color: #111;
-      }
-      .checked.bgCon .box {
-        background: #e3c251;
-        border-color: #b6952b;
-        color: #111;
-      }
-      .checked.bgRefi .box {
-        background: #5fb06a;
-        border-color: #3f7e48;
-        color: #111;
-      }
+  /* Grid wrapper: horizontal scroll, do not squeeze columns */
+  .gridWrap {
+    width: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    border-top: 4px solid #111;
+    padding-top: 0;
+  }
 
-      /* Zone row styling */
-      td.zoneCell {
-        background: #dbeaf7;
-        font-weight: 1000;
-        font-size: 40px;
-        letter-spacing: -0.5px;
-      }
-      .zoneSub {
-        display: block;
-        margin-top: 6px;
-        font-size: 24px;
-        font-weight: 900;
-        opacity: 0.75;
-      }
+  table.grid {
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+    width: max-content; /* prevent squeeze */
+    min-width: 100%;
+    table-layout: fixed; /* important: prevents the 3 sub-columns from collapsing */
+  }
 
-      /* Info button */
-      .infoBtn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 34px;
-        height: 34px;
-        border-radius: 999px;
-        border: 3px solid #111;
-        background: #fff;
-        font-weight: 900;
-        font-size: 20px;
-        line-height: 1;
-        margin-left: 10px;
-        cursor: pointer;
-        user-select: none;
-      }
+  th,
+  td {
+    border: 4px solid var(--border);
+    padding: 10px 10px;
+    vertical-align: middle;
+    background-clip: padding-box;
+  }
 
-      /* Modal */
-      .modalOverlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.55);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        z-index: 9999;
-      }
-      .modal {
-        width: min(820px, 96vw);
-        background: #fff;
-        border-radius: 14px;
-        border: 2px solid #c9d1d9;
-        overflow: hidden;
-      }
-      .modalHead {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 14px 16px;
-        background: #f3f4f6;
-        border-bottom: 2px solid #c9d1d9;
-        font-weight: 900;
-        font-size: 18px;
-      }
-      .modalBody {
-        padding: 16px;
-        font-size: 16px;
-        line-height: 1.45;
-        white-space: pre-wrap;
-      }
-      .modalClose {
-        background: #111;
-        color: #fff;
-        border: none;
-        border-radius: 10px;
-        padding: 10px 12px;
-        cursor: pointer;
-        font-weight: 900;
-      }
+  th {
+    background: #efefef;
+    font-weight: 900;
+    text-align: center;
+  }
 
-      .hint {
-        margin-top: 8px;
-        color: #b91c1c;
-        font-weight: 800;
-      }
+  /* Task column sizing */
+  th.taskHead,
+  td.taskCell,
+  td.zoneCell {
+    width: var(--taskColW);
+    min-width: var(--taskColW);
+    max-width: var(--taskColW);
+    text-align: left;
+  }
 
-      @media (max-width: 760px) {
-        h1 {
-          font-size: 38px;
-        }
-        .controls {
-          grid-template-columns: 1fr;
-        }
-        .row2 {
-          grid-template-columns: 1fr;
-        }
-        .btn {
-          width: 100%;
-          justify-self: start;
-        }
-      }
-    </style>
+  td.taskCell {
+    font-size: 22px;
+    line-height: 1.15;
+  }
+
+  /* Student header group cell (spans 3) */
+  th.studentHead {
+    min-width: var(--studentHeaderW);
+    width: var(--studentHeaderW);
+    font-size: 28px;
+  }
+
+  th.subHead {
+    font-size: 20px;
+    padding: 8px 0;
+    min-width: var(--cellW);
+    width: var(--cellW);
+  }
+
+  td.markCell {
+    min-width: var(--cellW);
+    width: var(--cellW);
+    padding: 10px 6px;
+    text-align: center;
+  }
+
+  /* Column backgrounds */
+  .bgInc {
+    background: var(--incBg);
+  }
+
+  .bgCon {
+    background: var(--conBg);
+  }
+
+  .bgRefi {
+    background: var(--refBg);
+  }
+
+  /* Clickable square */
+  .box {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    border: 3px solid #9aa4af;
+    background: #e9edf1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 1000;
+    color: #111;
+    user-select: none;
+    cursor: pointer;
+  }
+
+  /* Checked states, keep check dark, no green default */
+  .checked .box {
+    color: #111;
+  }
+
+  .checked.bgInc .box {
+    background: #e56a72;
+    border-color: #b34149;
+  }
+
+  .checked.bgCon .box {
+    background: #e3c251;
+    border-color: #b6952b;
+  }
+
+  .checked.bgRefi .box {
+    background: #5fb06a;
+    border-color: #3f7e48;
+  }
+
+  /* Zone row styling */
+  td.zoneCell {
+    background: #dbeaf7;
+    font-weight: 1000;
+    font-size: 40px;
+    letter-spacing: -0.5px;
+  }
+
+  .zoneSub {
+    display: block;
+    margin-top: 6px;
+    font-size: 24px;
+    font-weight: 900;
+    opacity: 0.75;
+  }
+
+  /* Info button (lowercase i) */
+  .infoBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 3px solid #111;
+    background: #fff;
+    font-weight: 900;
+    font-size: 20px;
+    line-height: 1;
+    margin-left: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  /* Modal */
+  .modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 9999;
+  }
+
+  .modal {
+    width: min(820px, 96vw);
+    background: #fff;
+    border-radius: 14px;
+    border: 2px solid #c9d1d9;
+    overflow: hidden;
+  }
+
+  .modalHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: #f3f4f6;
+    border-bottom: 2px solid #c9d1d9;
+    font-weight: 900;
+    font-size: 18px;
+  }
+
+  .modalBody {
+    padding: 16px;
+    font-size: 16px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+
+  .modalClose {
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-weight: 900;
+  }
+
+  .hint {
+    margin-top: 8px;
+    color: #b91c1c;
+    font-weight: 800;
+  }
+
+  /* ===== Sticky header + sticky Task column (Safari-friendly layering) ===== */
+
+  /* Sticky header row 1 */
+  table.grid thead tr:first-child th {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: #efefef;
+  }
+
+  /* Sticky header row 2 */
+  table.grid thead tr:nth-child(2) th {
+    position: sticky;
+    top: var(--theadRow1H);
+    z-index: 35;
+    background: #efefef;
+  }
+
+  /* Sticky Task column header cells */
+  table.grid thead th.taskHead {
+    position: sticky;
+    left: 0;
+    z-index: 60;
+    background: #efefef;
+  }
+
+  /* Sticky Task column body cells */
+  table.grid tbody td.taskCell,
+  table.grid tbody td.zoneCell {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background: #fff;
+  }
+
+  /* Keep zone header background when sticky */
+  table.grid tbody td.zoneCell {
+    z-index: 25;
+    background: #dbeaf7;
+  }
+
+  /* Divider line on the right of sticky Task column so overlap looks clean */
+  table.grid th.taskHead,
+  table.grid td.taskCell,
+  table.grid td.zoneCell {
+    box-shadow: 4px 0 0 #111;
+  }
+
+  /* Mobile adjustments */
+  @media (max-width: 760px) {
+    h1 {
+      font-size: 38px;
+    }
+
+    .controls {
+      grid-template-columns: 1fr;
+    }
+
+    .row2 {
+      grid-template-columns: 1fr;
+    }
+
+    .btn {
+      width: 100%;
+      justify-self: start;
+    }
+
+    :root {
+      --taskColW: clamp(150px, 42vw, 240px);
+      --cellW: 52px;
+      --theadRow1H: 54px;
+      --theadRow2H: 46px;
+    }
+
+    th.studentHead {
+      font-size: 24px;
+    }
+  }
+</style>
   </head>
 
   <body>
