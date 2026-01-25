@@ -5,487 +5,384 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Snowboard Assessment Grid</title>
 
-  <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     :root{
-      --bg:#f4f6f8;
-      --border:#111;
-      --muted:#555;
+      --bg: #f4f6f8;
+      --border: #111;
+      --muted: #555;
+      --incCol: #f8dfe1;   /* light red */
+      --conCol: #fbf5d8;   /* light yellow */
+      --refiCol:#e4f3e6;   /* light green */
 
-      --zone1:#dfeef9;
-      --zone2:#e6f3e6;
-      --zone3:#f6ecd8;
-
-      --incCol:#fae6e6;
-      --conCol:#fbf2cf;
-      --refiCol:#e6f4e6;
-
-      --btn:#2e7d32;
-      --btnText:#fff;
-      --btn2:#5b5f66;
-
-      --cellW:56px;
-      --taskMin:220px;
-      --taskMax:420px;
+      --incOn: #c84a52;    /* strong red */
+      --conOn: #c6a600;    /* strong yellow */
+      --refiOn:#2e7d32;    /* strong green */
     }
 
     body{
-      margin:0;
-      padding:16px;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      background:var(--bg);
-      color:#111;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 14px;
+      background: var(--bg);
+      color: #111;
     }
 
-    h1{ margin:0 0 6px 0; font-size:34px; line-height:1.1; }
-    .subtitle{ margin:0 0 14px 0; color:var(--muted); font-size:14px; }
+    h1{ margin: 0 0 4px 0; font-size: 32px; }
+    .small{ color: var(--muted); margin: 0 0 12px 0; }
 
     .controls{
       display:flex;
-      flex-direction:column;
-      gap:10px;
-      margin-bottom:12px;
+      flex-wrap: wrap;
+      gap: 10px 12px;
+      align-items:center;
+      margin-bottom: 10px;
     }
 
-    .row{
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
-      align-items:flex-end;
-    }
-
-    .field{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-
-    label{ font-size:14px; color:#111; font-weight:700; }
-
-    input[type="text"], select{
-      padding:8px 10px;
-      border:1px solid #c9d1d9;
-      border-radius:8px;
-      font-size:14px;
-      background:#fff;
-      min-width:240px;
-      max-width:100%;
+    label{ font-size: 14px; }
+    input[type="text"]{
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #c9d1d9;
+      font-size: 14px;
+      background: #fff;
+      min-width: 240px;
     }
 
     button{
-      padding:10px 14px;
-      border-radius:10px;
-      border:1px solid #1b5e20;
-      background:var(--btn);
-      color:var(--btnText);
-      font-weight:800;
-      font-size:14px;
-      cursor:pointer;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.25);
+      font-size: 16px;
+      cursor: pointer;
+      background: #fff;
     }
-
+    button.primary{
+      background: #2e7d32;
+      color: #fff;
+      border-color: rgba(0,0,0,0.2);
+    }
     button.secondary{
-      background:#fff;
-      color:#111;
-      border:1px solid #c9d1d9;
-      font-weight:800;
+      background: #5b6066;
+      color: #fff;
+      border-color: rgba(0,0,0,0.2);
     }
 
-    button.gray{
-      background:var(--btn2);
-      border:1px solid #4b4f56;
-      color:#fff;
-    }
-
-    button:disabled{
-      opacity:.55;
-      cursor:not-allowed;
+    select{
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #c9d1d9;
+      font-size: 14px;
+      background: #fff;
+      min-width: 260px;
     }
 
     .statusBar{
       display:flex;
+      justify-content: space-between;
+      gap: 12px;
       align-items:center;
-      gap:10px;
-      background:#eef7ee;
-      border:1px solid #b7e0b7;
-      border-radius:12px;
-      padding:10px 12px;
-      margin:10px 0 10px 0;
-      font-weight:800;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 2px solid rgba(46,125,50,0.25);
+      background: rgba(46,125,50,0.08);
+      margin: 10px 0 12px 0;
+      font-weight: 600;
     }
-    .dot{
-      width:12px; height:12px; border-radius:999px;
-      background:#2e7d32;
-      box-shadow: 0 0 0 3px rgba(46,125,50,.15);
+    .statusDot{
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      display:inline-block;
+      margin-right: 10px;
+      background: #2e7d32;
     }
-    .dot.offline{
-      background:#b00020;
-      box-shadow: 0 0 0 3px rgba(176,0,32,.15);
+    .statusDot.off{
+      background: #d32f2f;
+    }
+    .statusLeft{
+      display:flex;
+      align-items:center;
+      gap: 0;
+      flex: 1;
     }
     .statusRight{
-      margin-left:auto;
-      font-weight:900;
-      color:#2e7d32;
+      font-weight: 700;
+      color: #2e7d32;
     }
-    .statusRight.offline{ color:#b00020; }
+    .statusRight.off{
+      color: #d32f2f;
+    }
 
     .msg{
-      margin:0 0 10px 0;
-      font-weight:800;
-      color:#2e7d32;
+      margin: 8px 0 10px 0;
+      font-weight: 700;
+      color: #1b5e20;
     }
-    .msg.warn{ color:#b00020; }
+    .msg.err{
+      color:#b71c1c;
+    }
 
-    /* Table wrapper for horizontal scroll */
+    /* Table */
     .tableWrap{
-      overflow:auto;
-      border:3px solid var(--border);
-      border-radius:12px;
-      background:#fff;
-      box-shadow: 0 4px 14px rgba(0,0,0,.06);
+      overflow: auto;
+      border: 3px solid var(--border);
+      background: #fff;
     }
 
     table{
-      border-collapse:collapse;
-      width:max-content;
-      min-width:100%;
-      table-layout:fixed;
-      background:#fff;
+      border-collapse: collapse;
+      width: max-content;
+      min-width: 100%;
     }
 
     th, td{
-      border:3px solid var(--border);
-      padding:10px;
-      vertical-align:middle;
+      border: 3px solid var(--border);
+      padding: 10px 10px;
+      vertical-align: middle;
+      background: #fff;
     }
 
-    /* Sticky header */
+    th{
+      font-size: 18px;
+      text-align: center;
+      background: #e6e6e6;
+    }
+
+    /* Sticky first column */
+    th.taskCol, td.taskCol{
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      background: #fff;
+      min-width: 260px;
+      max-width: 320px;
+      width: 280px;
+    }
+    /* Top-left sticky corner above task column */
+    th.taskCol{
+      z-index: 8;
+    }
+
+    /* Sticky header rows */
     thead th{
-      position:sticky;
-      top:0;
-      background:#fff;
-      z-index:10;
+      position: sticky;
+      top: 0;
+      z-index: 7;
+    }
+    thead th.taskCol{
+      z-index: 10;
     }
 
-    /* Sticky first column (Task) */
-    .taskHead,
-    .taskCell,
-    .zoneCell{
-      position:sticky;
-      left:0;
-      background:#fff;
-      z-index:30; /* keep above student headers while scrolling */
+    /* Subheaders for Inc/Con/Refi row */
+    .subhead{
+      font-size: 16px;
+      font-weight: 800;
     }
 
-    thead .taskHead{
-      z-index:60; /* very top */
-      background:#fff;
+    /* Column backgrounds */
+    .incBg{ background: var(--incCol); }
+    .conBg{ background: var(--conCol); }
+    .refiBg{ background: var(--refiCol); }
+
+    /* Zone header row */
+    .zoneRow td{
+      font-weight: 900;
+      font-size: 22px;
+      line-height: 1.1;
+    }
+    .zoneMeta{
+      font-size: 18px;
+      font-weight: 800;
+      color: #444;
+      margin-top: 4px;
     }
 
-    .studentHead{
-      text-align:center;
-      font-size:22px;
-      font-weight:900;
-      background:#eee;
-      white-space:nowrap;
-      padding:10px 8px;
-    }
-
-    .subHead{
-      font-size:14px;
-      font-weight:900;
-      text-align:center;
-      padding:8px 6px;
-    }
-
-    /* Task column sizing (desktop) */
-    .taskHead{
-      font-size:18px;
-      font-weight:900;
-      text-align:left;
-      width: min(max(36vw, var(--taskMin)), var(--taskMax));
-      min-width: var(--taskMin);
-      max-width: var(--taskMax);
-    }
-
-    .taskCell{
-      width: min(max(36vw, var(--taskMin)), var(--taskMax));
-      min-width: var(--taskMin);
-      max-width: var(--taskMax);
-      font-size:20px;
-      line-height:1.2;
-    }
-
-    /* Phone portrait: shrink Task column so students stay visible */
-    @media (max-width: 520px){
-      :root{ --cellW:52px; }
-      .taskHead, .taskCell{
-        width: min(max(26vw, 180px), 300px);
-        min-width: 180px;
-        max-width: 300px;
-        font-size:18px;
-      }
-      h1{ font-size:30px; }
-    }
-
-    .zoneCell{
-      font-size:24px;
-      font-weight:900;
-      line-height:1.05;
-      padding:10px;
-    }
-
-    .zoneCell small{
-      display:block;
-      font-size:16px;
-      font-weight:900;
-      color:#333;
-      margin-top:2px;
-    }
-
-    .zone1{ background:var(--zone1) !important; }
-    .zone2{ background:var(--zone2) !important; }
-    .zone3{ background:var(--zone3) !important; }
-
-    .incCol{ background:var(--incCol); }
-    .conCol{ background:var(--conCol); }
-    .refiCol{ background:var(--refiCol); }
-
-    .cell{
-      width:var(--cellW);
-      min-width:var(--cellW);
-      max-width:var(--cellW);
-      text-align:center;
-      padding:8px;
-    }
-
-    /* Mark buttons */
-    .mark-btn{
-      width:46px;
-      height:46px;
-      border-radius:10px;
-      border:2px solid #9aa4ad;
-      background:#e9edf1;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:26px;
-      font-weight:1000;
-      line-height:1;
-      user-select:none;
-      cursor:pointer;
-    }
-
-    /* Selected states match column meaning */
-    .mark-btn.selected.inc  { background:#d32f2f; border-color:#b71c1c; color:#fff; }
-    .mark-btn.selected.con  { background:#f9a825; border-color:#c17900; color:#111; }
-    .mark-btn.selected.refi { background:#2e7d32; border-color:#1b5e20; color:#fff; }
-
-    /* Info icon (lowercase i) */
+    /* Info button */
     .infoBtn{
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      width:26px;
-      height:26px;
-      border-radius:999px;
-      border:2px solid #111;
-      background:#fff;
-      margin-left:10px;
-      cursor:pointer;
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      border: 2px solid #111;
+      font-weight: 900;
+      margin-left: 10px;
+      cursor: pointer;
       user-select:none;
-      font-weight:900;
-      font-size:16px;
-      line-height:1;
-      flex:0 0 auto;
+      background:#fff;
+      font-size: 16px;
+      line-height: 1;
     }
-    .infoBtn::before{
-      content:"i";
-      transform: translateY(-1px);
+
+    /* Mark squares */
+    .markCell{
+      text-align:center;
+      min-width: 74px;
+      width: 74px;
+      padding: 10px 6px;
+    }
+
+    .square{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      border: 2px solid #9aa1a8;
+      background: #e9ecef;
+      font-size: 26px;
+      font-weight: 900;
+      line-height: 1;
+      user-select:none;
+      cursor:pointer;
+    }
+
+    /* Selected states (match column) */
+    .square.on.inc{ background: var(--incOn); border-color: rgba(0,0,0,0.35); color: #fff; }
+    .square.on.con{ background: var(--conOn); border-color: rgba(0,0,0,0.35); color: #111; }
+    .square.on.refi{ background: var(--refiOn); border-color: rgba(0,0,0,0.35); color: #fff; }
+
+    /* Smaller on phone */
+    @media (max-width: 520px){
+      th.taskCol, td.taskCol{
+        min-width: 210px;
+        max-width: 260px;
+        width: 230px;
+      }
+      .markCell{
+        min-width: 62px;
+        width: 62px;
+      }
+      .square{
+        width: 38px;
+        height: 38px;
+        font-size: 24px;
+      }
+      th{ font-size: 16px; }
+      .zoneRow td{ font-size: 20px; }
     }
 
     /* Modal */
-    .modalBackdrop{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.55);
+    .modalOverlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
       display:none;
       align-items:center;
       justify-content:center;
-      padding:16px;
-      z-index:9999;
+      padding: 18px;
+      z-index: 9999;
     }
     .modal{
-      width:min(720px, 100%);
-      background:#fff;
-      border-radius:14px;
-      border:3px solid #111;
-      padding:14px 14px 12px 14px;
-      box-shadow:0 12px 30px rgba(0,0,0,.25);
+      width: min(680px, 100%);
+      max-height: 80vh;
+      overflow:auto;
+      background: #fff;
+      border-radius: 14px;
+      border: 2px solid rgba(0,0,0,0.25);
+      padding: 14px 14px 10px 14px;
     }
-    .modal h2{
-      margin:0 0 8px 0;
-      font-size:20px;
-    }
-    .modal .content{
-      font-size:15px;
-      color:#111;
-      line-height:1.35;
-      white-space:pre-wrap;
-    }
-    .modal .actions{
+    .modalHead{
       display:flex;
-      justify-content:flex-end;
-      margin-top:12px;
+      justify-content: space-between;
+      align-items:center;
+      gap: 12px;
+      margin-bottom: 8px;
     }
-
-    @media print{
-      body{ background:#fff; padding:0; }
-      .controls, .statusBar, .msg { display:none !important; }
-      .tableWrap{ border:none; box-shadow:none; }
-      thead th{ position:static; }
-      .taskHead, .taskCell, .zoneCell{ position:static; }
-      *{
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
+    .modalTitle{
+      font-weight: 900;
+      font-size: 18px;
+    }
+    .modalClose{
+      cursor:pointer;
+      border: 1px solid rgba(0,0,0,0.25);
+      background: #f1f3f5;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-weight: 800;
+    }
+    .modalBody{
+      white-space: pre-wrap;
+      font-size: 15px;
+      line-height: 1.35;
     }
   </style>
 </head>
 
 <body>
   <h1>Snowboard Assessment</h1>
-  <p class="subtitle">
-    Tap a square to set Inc (red), Con (yellow), or Refi (green). Saved locally first, then synced to Supabase when reachable.
+  <p class="small">
+    Tap a square to set Inc (red), Con (yellow), or Refi (green). Data is saved locally first and synced to Supabase automatically when possible.
   </p>
 
   <div class="controls">
-    <div class="row">
-      <div class="field">
-        <label for="groupName">Group name</label>
-        <input id="groupName" type="text" placeholder="Example: Lake Louise Group A" />
-      </div>
+    <label>Group name:</label>
+    <input id="groupName" type="text" placeholder="Example: Lake Louise Group A" />
 
-      <div class="field">
-        <label for="studentsInput">Students</label>
-        <input id="studentsInput" type="text" placeholder="Example: 2 Reuben, 1 Albert, Benedict" />
-      </div>
+    <label>Students:</label>
+    <input id="studentsInput" type="text" placeholder="Example: 1 Albert, 2 Benedict, 3 Reuben OR Albert, Benedict, Reuben" />
 
-      <div class="field">
-        <label for="sortMode">Sort students</label>
-        <select id="sortMode">
-          <option value="entered">Keep entered order</option>
-          <option value="bib">Sort by bib number (if present)</option>
-          <option value="name">Sort by name</option>
-        </select>
-      </div>
+    <button id="applyBtn" class="primary">Apply layout</button>
+    <button id="exportBtn" class="secondary">Export CSV (this group)</button>
+    <button id="loadLocalBtn" class="primary">Load saved marks</button>
 
-      <div class="field">
-        <label>&nbsp;</label>
-        <button id="applyBtn">Apply layout</button>
-      </div>
-    </div>
+    <label>Saved groups:</label>
+    <select id="savedGroupsSelect">
+      <option value="">Select a saved group</option>
+    </select>
+    <button id="useGroupBtn" class="secondary">Use group</button>
 
-    <div class="row">
-      <div class="field">
-        <label for="savedGroups">Saved groups (local)</label>
-        <select id="savedGroups">
-          <option value="">Select a saved group</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>&nbsp;</label>
-        <button id="useGroupBtn" class="gray">Use group</button>
-      </div>
-
-      <div class="field">
-        <label for="cloudGroups">Groups (cloud)</label>
-        <select id="cloudGroups">
-          <option value="">Select a cloud group</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>&nbsp;</label>
-        <button id="pullCloudBtn" class="secondary">Pull from cloud</button>
-      </div>
-
-      <div class="field">
-        <label>&nbsp;</label>
-        <button id="refreshCloudBtn" class="secondary">Refresh cloud list</button>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="field">
-        <label>&nbsp;</label>
-        <button id="loadLocalBtn" class="secondary">Load saved marks</button>
-      </div>
-      <div class="field">
-        <label>&nbsp;</label>
-        <button id="exportBtn" class="gray">Export CSV (this group)</button>
-      </div>
-    </div>
+    <button id="pullCloudBtn" class="secondary">Pull from cloud</button>
   </div>
 
-  <div class="statusBar" id="statusBar">
-    <span class="dot" id="onlineDot"></span>
-    <span id="onlineText">Online: cloud is reachable.</span>
-    <span class="statusRight" id="syncText">Synced</span>
+  <div id="statusBar" class="statusBar">
+    <div class="statusLeft">
+      <span id="statusDot" class="statusDot"></span>
+      <span id="statusText">Online: cloud is reachable.</span>
+    </div>
+    <div id="syncText" class="statusRight">Synced</div>
   </div>
 
-  <p class="msg" id="msg"></p>
+  <div id="msg" class="msg"></div>
 
-  <div class="tableWrap" id="tableWrap" style="display:none;">
-    <table id="gridTable"></table>
+  <div class="tableWrap">
+    <table id="grid"></table>
   </div>
 
-  <!-- Modal -->
-  <div class="modalBackdrop" id="modalBackdrop" role="dialog" aria-modal="true">
+  <div id="modalOverlay" class="modalOverlay" role="dialog" aria-modal="true">
     <div class="modal">
-      <h2 id="modalTitle">Info</h2>
-      <div class="content" id="modalContent"></div>
-      <div class="actions">
-        <button id="closeModalBtn" class="secondary">Close</button>
+      <div class="modalHead">
+        <div id="modalTitle" class="modalTitle"></div>
+        <button id="modalClose" class="modalClose">Close</button>
       </div>
+      <div id="modalBody" class="modalBody"></div>
     </div>
   </div>
 
   <script>
-    /**********************************************************************
-     * SUPABASE CONFIG (paste your real values)
-     **********************************************************************/
-    const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
-    const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    /***********************
+     * Supabase config
+     ***********************/
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    /**********************************************************************
-     * TABLE + COLUMN NAMES (must match Supabase exactly)
-     **********************************************************************/
-    const COURSES_TABLE = "courses";
-    const EVAL_TABLE = "evaluations";
+    // IMPORTANT: column name in courses table
+    // If you truly created it as "Participant_Map" (with capitals),
+    // tell me and I will switch this to exact quoted usage.
+    const COURSE_PARTICIPANT_MAP_COL = "participant_map";
 
-    // courses columns
-    const COL_GROUP = "group_name";
-    const COL_CLOSED = "is_closed";
-    const COL_PARTICIPANT_MAP = "participant_map"; // <-- your new column name
-
-    // evaluations columns
-    const COL_STUDENT = "student";
-    const COL_ZONE = "zone";
-    const COL_TASK = "task";
-    const COL_STATUS = "status";
-    const COL_UPDATED = "updated_at";
-
-    /**********************************************************************
-     * ZONES + TASKS (updated)
-     **********************************************************************/
+    /***********************
+     * Zone + tasks + info
+     ***********************/
     const ZONES = [
       {
-        id: 1,
-        title: "Zone 1",
-        subtitle: "FLATS AND MAGIC CARPET AREA",
-        className: "zone1",
+        zone: 1,
+        title: "FLATS AND MAGIC CARPET AREA",
         tasks: [
           "Skating in a Straight Line",
           "Skating Around Cones",
@@ -493,12 +390,12 @@
           "Switch Skating",
           "J-Turns (One-Footed)"
         ],
-        infoTitle: "Zone 1: Constraints and Evaluation Focus",
+        infoTitle: "Zone 1",
         infoText:
 `Possible Constraints
 • Glide with reduced space or toward a target marker.
 • Perform skating tasks with a variable snow surface (slightly packed or soft).
-• Skating around obstacles (example: cones, stubbies)
+• Skating around obstacles (example: cones, stubbies).
 • Use minor slope gradient to encourage longer glide or speed awareness.
 
 Evaluation Focus
@@ -508,10 +405,8 @@ Evaluation Focus
 • Awareness of surrounding space and other riders`
       },
       {
-        id: 2,
-        title: "Zone 2",
-        subtitle: "BUNNY HILL, MAGIC CARPET (GENTLE SLOPES)",
-        className: "zone2",
+        zone: 2,
+        title: "BUNNY HILL, MAGIC CARPET (GENTLE SLOPES)",
         tasks: [
           "Riding the Lift (magic carpet, t-bar, or chair)",
           "Standing on Both Edges",
@@ -519,7 +414,7 @@ Evaluation Focus
           "Traversing (Both Edges)",
           "Linked Turns"
         ],
-        infoTitle: "Zone 2: Variations and Evaluation Focus",
+        infoTitle: "Zone 2",
         infoText:
 `Possible variations
 • Perform a controlled stop during a sideslip or traverse.
@@ -528,17 +423,15 @@ Evaluation Focus
 • Follow a marked path or cone line to encourage directional awareness.
 
 Evaluation Focus
-• Smooth loading and unloading of the lift
+• Smooth loading and unloading of the magic carpet
 • Balanced posture while standing on both edges
 • Controlled side slips without abrupt stops
 • Stable traverses across the slope
 • Linked turns showing direction and speed control`
       },
       {
-        id: 3,
-        title: "Zone 3",
-        subtitle: "FLAGGED GREEN RUN",
-        className: "zone3",
+        zone: 3,
+        title: "FLAGGED GREEN RUN",
         tasks: [
           "Linked Turns (Continuous)",
           "Speed Control Through Turn Shape",
@@ -546,7 +439,7 @@ Evaluation Focus
           "Flow and Continuity",
           "Adaptability"
         ],
-        infoTitle: "Zone 3: Evaluation Focus",
+        infoTitle: "Zone 3",
         infoText:
 `Evaluation Focus
 • Continuous linked turns along the flagged path
@@ -557,749 +450,666 @@ Evaluation Focus
       }
     ];
 
-    /**********************************************************************
-     * LOCAL STORAGE
-     **********************************************************************/
-    const LS_KEY = "sb_assessment_groups_v4";
-    const LS_LAST_GROUP = "sb_assessment_last_group_v4";
+    const STATUSES = [
+      { key: "Inc", css: "inc", bg: "incBg" },
+      { key: "Con", css: "con", bg: "conBg" },
+      { key: "Refi", css: "refi", bg: "refiBg" }
+    ];
 
-    function nowIso(){ return new Date().toISOString(); }
+    /***********************
+     * Local storage keys
+     ***********************/
+    const LS_GROUPS = "sb_assess_saved_groups_v3";     // list of group names
+    const LS_DATA_PREFIX = "sb_assess_group_v3__";     // group data (students + marks)
 
-    function loadAllLocal(){
-      try{ return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }
-      catch(e){ return {}; }
+    /***********************
+     * DOM refs
+     ***********************/
+    const elGroupName = document.getElementById("groupName");
+    const elStudentsInput = document.getElementById("studentsInput");
+    const elApplyBtn = document.getElementById("applyBtn");
+    const elExportBtn = document.getElementById("exportBtn");
+    const elLoadLocalBtn = document.getElementById("loadLocalBtn");
+    const elUseGroupBtn = document.getElementById("useGroupBtn");
+    const elSavedGroupsSelect = document.getElementById("savedGroupsSelect");
+    const elGrid = document.getElementById("grid");
+    const elMsg = document.getElementById("msg");
+
+    const elStatusDot = document.getElementById("statusDot");
+    const elStatusText = document.getElementById("statusText");
+    const elSyncText = document.getElementById("syncText");
+    const elStatusBar = document.getElementById("statusBar");
+
+    const elPullCloudBtn = document.getElementById("pullCloudBtn");
+
+    const elModalOverlay = document.getElementById("modalOverlay");
+    const elModalTitle = document.getElementById("modalTitle");
+    const elModalBody = document.getElementById("modalBody");
+    const elModalClose = document.getElementById("modalClose");
+
+    /***********************
+     * State
+     ***********************/
+    let currentGroup = "";
+    let students = []; // array of display labels in correct order (what columns show)
+    // marks[group][studentLabel][zone][task] = "Inc" | "Con" | "Refi"
+    let marks = {};
+
+    let cloudReachable = true;
+    let isSyncing = false;
+
+    /***********************
+     * Helpers
+     ***********************/
+    function setMsg(text, isError=false){
+      elMsg.textContent = text || "";
+      elMsg.className = "msg" + (isError ? " err" : "");
     }
-    function saveAllLocal(obj){
-      localStorage.setItem(LS_KEY, JSON.stringify(obj));
+
+    function normalizeGroupName(name){
+      return (name || "").trim();
     }
 
-    function listLocalGroups(){
-      return Object.keys(loadAllLocal()).sort((a,b)=>a.localeCompare(b));
+    function parseStudentsInput(raw){
+      // Accept:
+      // "1 Albert, 2 Benedict, 3 Reuben"
+      // "Albert, Benedict, Reuben"
+      // "1,2,3" (rare)
+      const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+
+      // Keep original order as typed for the visual columns.
+      // The participant_map (cloud) controls order across devices.
+      return parts;
     }
 
-    function setMsg(text, warn=false){
-      const el = document.getElementById("msg");
-      el.textContent = text || "";
-      el.classList.toggle("warn", !!warn);
+    function ensureGroupState(groupName){
+      if (!marks[groupName]) marks[groupName] = {};
+      for (const s of students){
+        if (!marks[groupName][s]) marks[groupName][s] = {};
+      }
     }
 
-    /**********************************************************************
-     * ONLINE / CLOUD REACHABILITY
-     **********************************************************************/
-    let cloudReachable = false;
-
-    async function checkCloudReachable(){
+    function lsGetGroups(){
       try{
-        const { error } = await supabase.from(COURSES_TABLE).select(COL_GROUP).limit(1);
-        cloudReachable = !error;
-      }catch(e){
-        cloudReachable = false;
+        return JSON.parse(localStorage.getItem(LS_GROUPS) || "[]");
+      }catch{
+        return [];
       }
-      updateOnlineUI();
     }
 
-    function updateOnlineUI(){
-      const dot = document.getElementById("onlineDot");
-      const txt = document.getElementById("onlineText");
-      const sync = document.getElementById("syncText");
+    function lsSaveGroups(list){
+      localStorage.setItem(LS_GROUPS, JSON.stringify(list));
+    }
 
-      if(cloudReachable){
-        dot.classList.remove("offline");
-        txt.textContent = "Online: cloud is reachable.";
-        sync.classList.remove("offline");
-        sync.textContent = "Synced";
+    function lsSaveGroupData(groupName){
+      const key = LS_DATA_PREFIX + groupName;
+      const payload = {
+        group: groupName,
+        students,
+        marks: marks[groupName] || {}
+      };
+      localStorage.setItem(key, JSON.stringify(payload));
+
+      // also ensure group is in saved list
+      const list = lsGetGroups();
+      if (!list.includes(groupName)){
+        list.push(groupName);
+        lsSaveGroups(list);
+      }
+      refreshSavedGroupsDropdown();
+    }
+
+    function lsLoadGroupData(groupName){
+      const key = LS_DATA_PREFIX + groupName;
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      try{
+        return JSON.parse(raw);
+      }catch{
+        return null;
+      }
+    }
+
+    function refreshSavedGroupsDropdown(){
+      const list = lsGetGroups();
+      const selected = elSavedGroupsSelect.value;
+      elSavedGroupsSelect.innerHTML = `<option value="">Select a saved group</option>`;
+      for (const g of list){
+        const opt = document.createElement("option");
+        opt.value = g;
+        opt.textContent = g;
+        elSavedGroupsSelect.appendChild(opt);
+      }
+      if (selected) elSavedGroupsSelect.value = selected;
+    }
+
+    function openModal(title, body){
+      elModalTitle.textContent = title;
+      elModalBody.textContent = body;
+      elModalOverlay.style.display = "flex";
+    }
+    function closeModal(){
+      elModalOverlay.style.display = "none";
+    }
+
+    function updateOnlineUI(isOnline){
+      cloudReachable = isOnline;
+      if (isOnline){
+        elStatusDot.classList.remove("off");
+        elStatusText.textContent = "Online: cloud is reachable.";
+        elStatusBar.style.borderColor = "rgba(46,125,50,0.25)";
+        elStatusBar.style.background = "rgba(46,125,50,0.08)";
+        elSyncText.classList.remove("off");
       }else{
-        dot.classList.add("offline");
-        txt.textContent = "Offline: showing marks stored on this device.";
-        sync.classList.add("offline");
-        sync.textContent = "Offline";
+        elStatusDot.classList.add("off");
+        elStatusText.textContent = "Offline: using local storage.";
+        elStatusBar.style.borderColor = "rgba(211,47,47,0.25)";
+        elStatusBar.style.background = "rgba(211,47,47,0.08)";
+        elSyncText.classList.add("off");
       }
     }
 
-    /**********************************************************************
-     * STUDENT PARSING + SORT
-     **********************************************************************/
-    function parseStudents(raw){
-      const parts = (raw || "")
-        .split(",")
-        .map(s => s.trim())
-        .filter(Boolean);
-
-      const entries = [];
-      for(const p of parts){
-        // Name:2
-        let m = p.match(/^(.+?)\s*[:=]\s*(\d+)$/);
-        if(m){
-          entries.push({ name: m[1].trim(), bib: parseInt(m[2],10) });
-          continue;
-        }
-        // 2 Name
-        m = p.match(/^(\d+)\s+(.+)$/);
-        if(m){
-          entries.push({ name: m[2].trim(), bib: parseInt(m[1],10) });
-          continue;
-        }
-        // 2-Name or 2.Name
-        m = p.match(/^(\d+)[\.\-]\s*(.+)$/);
-        if(m){
-          entries.push({ name: m[2].trim(), bib: parseInt(m[1],10) });
-          continue;
-        }
-        entries.push({ name: p, bib: null });
+    async function pingCloud(){
+      try{
+        // lightweight query to verify auth + reachability
+        const { error } = await supabaseClient.from("courses").select("group_name").limit(1);
+        updateOnlineUI(!error);
+      }catch{
+        updateOnlineUI(false);
       }
-      return entries;
     }
 
-    function sortStudents(entries, mode){
-      const arr = [...entries];
-      if(mode === "bib"){
-        arr.sort((a,b)=>{
-          const ax = (a.bib === null || a.bib === undefined) ? Number.POSITIVE_INFINITY : a.bib;
-          const bx = (b.bib === null || b.bib === undefined) ? Number.POSITIVE_INFINITY : b.bib;
-          if(ax !== bx) return ax - bx;
-          return a.name.localeCompare(b.name);
-        });
-      }else if(mode === "name"){
-        arr.sort((a,b)=>a.name.localeCompare(b.name));
-      }
-      return arr;
+    /***********************
+     * Cloud: participant_map
+     ***********************/
+    function buildParticipantMap(studentsList){
+      // Students are whatever the instructor typed. We store a stable ordering map.
+      // If the instructor typed "2 Reuben", store orderKey: 2, label: "2 Reuben"
+      // If name only, orderKey: null and preserve typed order.
+      const map = studentsList.map((label, idx) => {
+        const m = label.match(/^(\d+)\s+(.+)$/);
+        if (m){
+          return { label, bib: Number(m[1]), name: m[2], order: Number(m[1]) };
+        }
+        return { label, bib: null, name: label, order: 1000000 + idx };
+      });
+
+      // Sort by order so bib numbers become consistent across devices.
+      map.sort((a,b) => a.order - b.order);
+      return map;
     }
 
-    function displayStudentLabel(s){
-      if(s.bib !== null && s.bib !== undefined) return `${s.bib} ${s.name}`;
-      return s.name;
-    }
+    async function ensureCourseRow(groupName){
+      // Upsert into courses table with participant map.
+      const pmap = buildParticipantMap(students);
 
-    function buildParticipantMap(entries){
-      return {
-        version: 1,
-        created_at: nowIso(),
-        participants: entries.map(e => ({ name: e.name, bib: e.bib }))
-      };
-    }
-
-    /**********************************************************************
-     * GRID STATE
-     **********************************************************************/
-    let currentGroupName = "";
-    let currentStudents = [];    // [{name,bib,label}]
-    let currentMarks = {};       // key -> "Inc|Con|Refi"
-    let pendingOps = [];         // queued cloud writes if offline
-
-    function markKey(studentLabel, zoneId, task){
-      return `${studentLabel}||${zoneId}||${task}`;
-    }
-
-    function getSelectedStatus(studentLabel, zoneId, task){
-      return currentMarks[markKey(studentLabel, zoneId, task)] || "";
-    }
-
-    function setSelectedStatus(studentLabel, zoneId, task, status){
-      const k = markKey(studentLabel, zoneId, task);
-      if(!status) delete currentMarks[k];
-      else currentMarks[k] = status;
-    }
-
-    function saveCurrentToLocal(note){
-      if(!currentGroupName) return;
-
-      const data = {
-        groupName: currentGroupName,
-        students: currentStudents.map(s => ({ name:s.name, bib:s.bib, label:s.label })),
-        marks: currentMarks,
-        pendingOps: pendingOps,
-        updated_at: nowIso()
-      };
-
-      const all = loadAllLocal();
-      all[currentGroupName] = data;
-      saveAllLocal(all);
-
-      localStorage.setItem(LS_LAST_GROUP, currentGroupName);
-      refreshLocalGroupsUI();
-
-      if(note) setMsg(note, false);
-    }
-
-    function loadGroupFromLocal(groupName){
-      const all = loadAllLocal();
-      const data = all[groupName];
-      if(!data) return false;
-
-      currentGroupName = data.groupName || groupName;
-      currentStudents = (data.students || []).map(s => ({ ...s }));
-      currentMarks = data.marks || {};
-      pendingOps = data.pendingOps || [];
-      document.getElementById("groupName").value = currentGroupName;
-      document.getElementById("studentsInput").value = currentStudents.map(s => s.label).join(", ");
-      renderGrid();
-      setMsg("Loaded. Local marks kept where present.", false);
-      return true;
-    }
-
-    /**********************************************************************
-     * SUPABASE OPS
-     **********************************************************************/
-    async function ensureCourseRow(groupName, participantMap){
       const payload = {
-        [COL_GROUP]: groupName,
-        [COL_CLOSED]: false,
-        [COL_PARTICIPANT_MAP]: participantMap,
-        [COL_UPDATED]: nowIso()
+        group_name: groupName,
+        is_closed: false,
+        [COURSE_PARTICIPANT_MAP_COL]: pmap
       };
 
-      const { error } = await supabase
-        .from(COURSES_TABLE)
-        .upsert([payload], { onConflict: COL_GROUP });
+      // Insert if missing, otherwise update participant map.
+      // This requires you have INSERT/UPDATE policies on courses for anon.
+      const { error } = await supabaseClient
+        .from("courses")
+        .upsert(payload, { onConflict: "group_name" });
 
-      if(error) throw error;
-    }
-
-    async function upsertEvaluationMark({ groupName, studentLabel, zoneId, task, status }){
-      const payload = {
-        [COL_GROUP]: groupName,
-        [COL_STUDENT]: studentLabel,
-        [COL_ZONE]: zoneId,
-        [COL_TASK]: task,
-        [COL_STATUS]: status,
-        [COL_UPDATED]: nowIso()
-      };
-
-      // This triggers an UPSERT (POST with Prefer: resolution=merge-duplicates)
-      const { error } = await supabase
-        .from(EVAL_TABLE)
-        .upsert([payload], { onConflict: `${COL_GROUP},${COL_STUDENT},${COL_ZONE},${COL_TASK}` });
-
-      if(error) throw error;
-    }
-
-    async function deleteEvaluationMark({ groupName, studentLabel, zoneId, task }){
-      // Only used when user clears a mark
-      const { error } = await supabase
-        .from(EVAL_TABLE)
-        .delete()
-        .eq(COL_GROUP, groupName)
-        .eq(COL_STUDENT, studentLabel)
-        .eq(COL_ZONE, zoneId)
-        .eq(COL_TASK, task);
-
-      if(error) throw error;
-    }
-
-    async function fetchCloudGroups(){
-      const { data, error } = await supabase
-        .from(COURSES_TABLE)
-        .select(`${COL_GROUP}`)
-        .order(COL_GROUP, { ascending:true });
-
-      if(error) throw error;
-      return (data || []).map(r => r[COL_GROUP]).filter(Boolean);
+      if (error) throw error;
     }
 
     async function fetchCourseRow(groupName){
-      const { data, error } = await supabase
-        .from(COURSES_TABLE)
-        .select(`${COL_GROUP}, ${COL_PARTICIPANT_MAP}`)
-        .eq(COL_GROUP, groupName)
-        .limit(1)
+      const { data, error } = await supabaseClient
+        .from("courses")
+        .select(`group_name, is_closed, ${COURSE_PARTICIPANT_MAP_COL}`)
+        .eq("group_name", groupName)
         .maybeSingle();
 
-      if(error) throw error;
-      return data || null;
+      if (error) throw error;
+      return data;
     }
 
-    async function fetchEvaluations(groupName){
-      const { data, error } = await supabase
-        .from(EVAL_TABLE)
-        .select(`${COL_STUDENT}, ${COL_ZONE}, ${COL_TASK}, ${COL_STATUS}`)
-        .eq(COL_GROUP, groupName);
+    /***********************
+     * Cloud: evaluations UPSERT
+     ***********************/
+    async function upsertEvaluation(groupName, studentLabel, zoneNum, taskName, statusKey){
+      // This is the critical fix. It triggers POST with onConflict and updates the row.
+      const row = {
+        group_name: groupName,
+        student: studentLabel,
+        zone: zoneNum,
+        task: taskName,
+        status: statusKey
+      };
 
-      if(error) throw error;
+      const { error } = await supabaseClient
+        .from("evaluations")
+        .upsert(row, { onConflict: "group_name,student,zone,task" });
+
+      if (error) throw error;
+    }
+
+    async function deleteEvaluation(groupName, studentLabel, zoneNum, taskName){
+      const { error } = await supabaseClient
+        .from("evaluations")
+        .delete()
+        .eq("group_name", groupName)
+        .eq("student", studentLabel)
+        .eq("zone", zoneNum)
+        .eq("task", taskName);
+
+      if (error) throw error;
+    }
+
+    async function pullEvaluationsFromCloud(groupName){
+      const { data, error } = await supabaseClient
+        .from("evaluations")
+        .select("group_name,student,zone,task,status")
+        .eq("group_name", groupName);
+
+      if (error) throw error;
       return data || [];
     }
 
-    async function flushPendingOps(){
-      if(!cloudReachable) return;
-      if(pendingOps.length === 0) return;
-
-      const ops = [...pendingOps];
-      pendingOps = [];
-      saveCurrentToLocal();
-
-      for(const op of ops){
-        try{
-          if(op.type === "upsert"){
-            await upsertEvaluationMark(op.payload);
-          }else if(op.type === "delete"){
-            await deleteEvaluationMark(op.payload);
-          }
-        }catch(e){
-          // put back and stop
-          pendingOps = [op, ...pendingOps];
-          saveCurrentToLocal();
-          throw e;
-        }
-      }
-    }
-
-    /**********************************************************************
-     * RENDER GRID
-     **********************************************************************/
-    function renderGrid(){
-      const tableWrap = document.getElementById("tableWrap");
-      const table = document.getElementById("gridTable");
-
-      if(!currentGroupName || currentStudents.length === 0){
-        tableWrap.style.display = "none";
-        table.innerHTML = "";
+    /***********************
+     * Rendering
+     ***********************/
+    function buildGrid(){
+      if (!currentGroup || students.length === 0){
+        elGrid.innerHTML = "";
         return;
       }
 
-      tableWrap.style.display = "block";
+      ensureGroupState(currentGroup);
 
-      let html = "<thead>";
+      // Header rows:
+      // Row 1: Task | Student | Student | Student ...
+      // Row 2: blank under Task | Inc Con Refi | Inc Con Refi ...
+      const thead = document.createElement("thead");
 
-      // Row 1: Task + student names (colspan=3 each)
-      html += "<tr>";
-      html += `<th class="taskHead">Task</th>`;
-      for(const s of currentStudents){
-        html += `<th class="studentHead" colspan="3">${escapeHtml(s.label)}</th>`;
+      const r1 = document.createElement("tr");
+      const thTask = document.createElement("th");
+      thTask.className = "taskCol";
+      thTask.textContent = "Task";
+      r1.appendChild(thTask);
+
+      for (const s of students){
+        const th = document.createElement("th");
+        th.colSpan = 3;
+        th.textContent = s;
+        r1.appendChild(th);
       }
-      html += "</tr>";
+      thead.appendChild(r1);
 
-      // Row 2: blank under Task + Inc/Con/Refi labels
-      html += "<tr>";
-      html += `<th class="taskHead"></th>`;
-      for(let i=0;i<currentStudents.length;i++){
-        html += `<th class="subHead incCol">Inc</th>`;
-        html += `<th class="subHead conCol">Con</th>`;
-        html += `<th class="subHead refiCol">Refi</th>`;
-      }
-      html += "</tr>";
-      html += "</thead>";
+      const r2 = document.createElement("tr");
+      const thBlank = document.createElement("th");
+      thBlank.className = "taskCol";
+      thBlank.textContent = "";
+      r2.appendChild(thBlank);
 
-      html += "<tbody>";
-
-      for(const z of ZONES){
-        // Zone header row
-        html += "<tr>";
-        html += `<td class="zoneCell ${z.className}">`;
-        html += `<div style="display:flex; align-items:center; gap:10px;">`;
-        html += `<div style="display:flex; flex-direction:column;">`;
-        html += `<div>${escapeHtml(z.title)}</div>`;
-        html += `<small>${escapeHtml(z.subtitle)}</small>`;
-        html += `</div>`;
-        html += `<span class="infoBtn" data-zone="${z.id}" title="Info"></span>`;
-        html += `</div>`;
-        html += `</td>`;
-
-        for(const s of currentStudents){
-          html += `<td class="${z.className}" colspan="3" style="text-align:center; font-weight:900; font-size:22px;">${escapeHtml(s.label)}</td>`;
-        }
-        html += "</tr>";
-
-        // Tasks
-        for(const task of z.tasks){
-          html += "<tr>";
-          html += `<td class="taskCell">${escapeHtml(task)}</td>`;
-
-          for(const s of currentStudents){
-            const selected = getSelectedStatus(s.label, z.id, task);
-
-            html += buildCell(s.label, z.id, task, "Inc", selected);
-            html += buildCell(s.label, z.id, task, "Con", selected);
-            html += buildCell(s.label, z.id, task, "Refi", selected);
-          }
-
-          html += "</tr>";
+      for (let i=0; i<students.length; i++){
+        for (const st of STATUSES){
+          const th = document.createElement("th");
+          th.className = "subhead " + st.bg;
+          th.textContent = st.key;
+          r2.appendChild(th);
         }
       }
+      thead.appendChild(r2);
 
-      html += "</tbody>";
-      table.innerHTML = html;
+      const tbody = document.createElement("tbody");
 
-      // Bind info buttons
-      document.querySelectorAll(".infoBtn").forEach(btn=>{
-        btn.addEventListener("click", ()=>{
-          const zid = parseInt(btn.getAttribute("data-zone"),10);
-          const zone = ZONES.find(x=>x.id===zid);
-          if(!zone) return;
-          openModal(zone.infoTitle, zone.infoText);
-        });
-      });
+      for (const z of ZONES){
+        // Zone row
+        const zr = document.createElement("tr");
+        zr.className = "zoneRow";
 
-      // Bind mark buttons
-      document.querySelectorAll(".mark-btn").forEach(btn=>{
-        btn.addEventListener("click", async ()=>{
-          const student = btn.getAttribute("data-student");
-          const zoneId = parseInt(btn.getAttribute("data-zone"), 10);
-          const task = btn.getAttribute("data-task");
-          const status = btn.getAttribute("data-status"); // Inc/Con/Refi
-
-          await handleMarkClick(student, zoneId, task, status);
-        });
-      });
-    }
-
-    function buildCell(studentLabel, zoneId, task, status, selectedStatus){
-      const cls = status === "Inc" ? "incCol" : status === "Con" ? "conCol" : "refiCol";
-      const selectedClass =
-        selectedStatus === status
-          ? (status === "Inc" ? "selected inc" : status === "Con" ? "selected con" : "selected refi")
-          : "";
-
-      const markChar = (selectedStatus === status) ? "✓" : "";
-
-      return `
-        <td class="cell ${cls}">
-          <div class="mark-btn ${selectedClass}"
-               data-student="${escapeAttr(studentLabel)}"
-               data-zone="${zoneId}"
-               data-task="${escapeAttr(task)}"
-               data-status="${status}">
-            ${markChar}
+        const tdZ = document.createElement("td");
+        tdZ.className = "taskCol";
+        tdZ.innerHTML = `
+          <div>
+            <div>Zone ${z.zone} <span class="infoBtn" data-zone="${z.zone}">i</span></div>
+            <div class="zoneMeta">${z.title}</div>
           </div>
-        </td>
-      `;
+        `;
+        zr.appendChild(tdZ);
+
+        for (const s of students){
+          const td = document.createElement("td");
+          td.colSpan = 3;
+          td.style.textAlign = "center";
+          td.style.fontWeight = "900";
+          td.style.background = z.zone === 1 ? "#dfefff" : (z.zone === 2 ? "#e7f5ea" : "#f3eddc");
+          td.textContent = s;
+          zr.appendChild(td);
+        }
+        tbody.appendChild(zr);
+
+        // Task rows
+        for (const taskName of z.tasks){
+          const tr = document.createElement("tr");
+
+          const tdTask = document.createElement("td");
+          tdTask.className = "taskCol";
+          tdTask.textContent = taskName;
+          tr.appendChild(tdTask);
+
+          for (const s of students){
+            const current = (((marks[currentGroup] || {})[s] || {})[z.zone] || {})[taskName] || "";
+
+            for (const st of STATUSES){
+              const td = document.createElement("td");
+              td.className = "markCell " + st.bg;
+
+              const sq = document.createElement("div");
+              sq.className = "square " + st.css;
+              sq.dataset.group = currentGroup;
+              sq.dataset.student = s;
+              sq.dataset.zone = String(z.zone);
+              sq.dataset.task = taskName;
+              sq.dataset.status = st.key;
+
+              if (current === st.key){
+                sq.classList.add("on", st.css);
+                sq.textContent = "✓";
+              }else{
+                sq.textContent = "";
+              }
+
+              td.appendChild(sq);
+              tr.appendChild(td);
+            }
+          }
+
+          tbody.appendChild(tr);
+        }
+      }
+
+      elGrid.innerHTML = "";
+      elGrid.appendChild(thead);
+      elGrid.appendChild(tbody);
+
+      // Hook info buttons
+      elGrid.querySelectorAll(".infoBtn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const zoneNum = Number(btn.dataset.zone);
+          const z = ZONES.find(x => x.zone === zoneNum);
+          if (!z) return;
+          openModal(`${z.infoTitle}: ${z.title}`, z.infoText);
+        });
+      });
     }
 
-    async function handleMarkClick(studentLabel, zoneId, task, clickedStatus){
-      if(!currentGroupName) return;
+    function setMarkLocal(groupName, studentLabel, zoneNum, taskName, statusKey){
+      if (!marks[groupName]) marks[groupName] = {};
+      if (!marks[groupName][studentLabel]) marks[groupName][studentLabel] = {};
+      if (!marks[groupName][studentLabel][zoneNum]) marks[groupName][studentLabel][zoneNum] = {};
+      marks[groupName][studentLabel][zoneNum][taskName] = statusKey;
+      lsSaveGroupData(groupName);
+    }
 
-      const existing = getSelectedStatus(studentLabel, zoneId, task);
+    function clearMarkLocal(groupName, studentLabel, zoneNum, taskName){
+      try{
+        delete marks[groupName][studentLabel][zoneNum][taskName];
+      }catch{}
+      lsSaveGroupData(groupName);
+    }
 
-      // Toggle: clicking same status clears; clicking different status sets that one
-      const next = (existing === clickedStatus) ? "" : clickedStatus;
+    function rerenderRowSquares(studentLabel, zoneNum, taskName){
+      // Update just the 3 squares for this student/task/zone.
+      // Simpler: rebuild whole table, still fast enough for these sizes.
+      buildGrid();
+    }
 
-      setSelectedStatus(studentLabel, zoneId, task, next);
-      renderGrid();
-      saveCurrentToLocal();
+    /***********************
+     * Sync logic
+     ***********************/
+    async function trySyncMark(groupName, studentLabel, zoneNum, taskName, statusKey){
+      if (!cloudReachable) return;
 
-      // Attempt cloud write
-      if(!cloudReachable){
-        // Queue it
-        if(next){
-          pendingOps.push({
-            type:"upsert",
-            payload:{ groupName: currentGroupName, studentLabel, zoneId, task, status: next }
-          });
+      isSyncing = true;
+      elSyncText.textContent = "Syncing...";
+      try{
+        await upsertEvaluation(groupName, studentLabel, zoneNum, taskName, statusKey);
+        elSyncText.textContent = "Synced";
+      }catch (e){
+        elSyncText.textContent = "Not synced";
+        updateOnlineUI(false);
+      }finally{
+        isSyncing = false;
+      }
+    }
+
+    async function tryDeleteMark(groupName, studentLabel, zoneNum, taskName){
+      if (!cloudReachable) return;
+
+      isSyncing = true;
+      elSyncText.textContent = "Syncing...";
+      try{
+        await deleteEvaluation(groupName, studentLabel, zoneNum, taskName);
+        elSyncText.textContent = "Synced";
+      }catch (e){
+        elSyncText.textContent = "Not synced";
+        updateOnlineUI(false);
+      }finally{
+        isSyncing = false;
+      }
+    }
+
+    /***********************
+     * Event handlers
+     ***********************/
+    elApplyBtn.addEventListener("click", async () => {
+      setMsg("");
+
+      const g = normalizeGroupName(elGroupName.value);
+      if (!g){
+        setMsg("Please enter a group name.", true);
+        return;
+      }
+      const sList = parseStudentsInput(elStudentsInput.value);
+      if (sList.length === 0){
+        setMsg("Please enter at least one student (comma-separated).", true);
+        return;
+      }
+
+      currentGroup = g;
+      students = sList;
+
+      // Ensure local
+      ensureGroupState(currentGroup);
+      lsSaveGroupData(currentGroup);
+
+      // Build UI immediately
+      buildGrid();
+
+      // Try cloud: save course row with participant map
+      try{
+        await pingCloud();
+        if (cloudReachable){
+          await ensureCourseRow(currentGroup);
+          setMsg("Layout saved locally and synced to cloud.");
         }else{
-          pendingOps.push({
-            type:"delete",
-            payload:{ groupName: currentGroupName, studentLabel, zoneId, task }
-          });
+          setMsg("Saved locally. Cloud not reachable.", false);
         }
-        saveCurrentToLocal("Saved locally (offline).", false);
+      }catch (e){
+        setMsg("Saved locally. Cloud sync failed.", false);
+      }
+    });
+
+    elLoadLocalBtn.addEventListener("click", () => {
+      setMsg("");
+      const g = normalizeGroupName(elGroupName.value);
+      if (!g){
+        setMsg("Enter the group name you want to load.", true);
+        return;
+      }
+      const data = lsLoadGroupData(g);
+      if (!data){
+        setMsg("No local data found for that group.", true);
+        return;
+      }
+      currentGroup = data.group;
+      students = data.students || [];
+      marks[currentGroup] = data.marks || {};
+      buildGrid();
+      setMsg("Loaded. Local marks kept where present.");
+    });
+
+    elUseGroupBtn.addEventListener("click", () => {
+      setMsg("");
+      const g = elSavedGroupsSelect.value;
+      if (!g){
+        setMsg("Select a saved group first.", true);
+        return;
+      }
+      const data = lsLoadGroupData(g);
+      if (!data){
+        setMsg("No local data found for that group.", true);
+        return;
+      }
+      elGroupName.value = g;
+      currentGroup = data.group;
+      students = data.students || [];
+      marks[currentGroup] = data.marks || {};
+      buildGrid();
+      setMsg("Loaded group from local storage.");
+    });
+
+    elPullCloudBtn.addEventListener("click", async () => {
+      setMsg("");
+      const g = normalizeGroupName(elGroupName.value);
+      if (!g){
+        setMsg("Enter the group name to pull from the cloud.", true);
         return;
       }
 
       try{
-        // Make sure course row exists (so other devices can pull participant map)
-        const participantMap = buildParticipantMap(currentStudents.map(s=>({name:s.name, bib:s.bib})));
-        await ensureCourseRow(currentGroupName, participantMap);
-
-        if(next){
-          await upsertEvaluationMark({ groupName: currentGroupName, studentLabel, zoneId, task, status: next });
-        }else{
-          await deleteEvaluationMark({ groupName: currentGroupName, studentLabel, zoneId, task });
-        }
-
-        await flushPendingOps();
-        document.getElementById("syncText").textContent = "Synced";
-        setMsg("Synced to cloud.", false);
-      }catch(e){
-        // Queue it if write fails
-        if(next){
-          pendingOps.push({
-            type:"upsert",
-            payload:{ groupName: currentGroupName, studentLabel, zoneId, task, status: next }
-          });
-        }else{
-          pendingOps.push({
-            type:"delete",
-            payload:{ groupName: currentGroupName, studentLabel, zoneId, task }
-          });
-        }
-        saveCurrentToLocal("Saved locally. Cloud write failed (will retry).", true);
-      }
-    }
-
-    /**********************************************************************
-     * CLOUD PULL (this is what makes laptop marks appear on phone)
-     **********************************************************************/
-    async function pullFromCloud(groupName){
-      if(!groupName) return;
-      if(!cloudReachable){
-        setMsg("Cloud is not reachable right now.", true);
-        return;
-      }
-
-      try{
-        const course = await fetchCourseRow(groupName);
-        if(!course){
-          setMsg("Group not found in cloud.", true);
+        await pingCloud();
+        if (!cloudReachable){
+          setMsg("Cloud is not reachable. Try again when online.", true);
           return;
         }
 
-        // Participant map drives stable ordering on all devices
-        const pm = course[COL_PARTICIPANT_MAP];
-        if(pm && pm.participants && Array.isArray(pm.participants)){
-          currentStudents = pm.participants.map(p=>{
-            const label = (p.bib !== null && p.bib !== undefined) ? `${p.bib} ${p.name}` : p.name;
-            return { name:p.name, bib:p.bib, label };
-          });
+        // Get course row so we can apply participant_map ordering across devices
+        const course = await fetchCourseRow(g);
+        if (!course){
+          setMsg("Group not found in cloud courses table.", true);
+          return;
+        }
+
+        const pmap = course[COURSE_PARTICIPANT_MAP_COL] || [];
+        if (Array.isArray(pmap) && pmap.length){
+          // Use stored stable order
+          students = pmap.map(x => x.label).filter(Boolean);
         }else{
-          // fallback: keep whatever is local
-          if(currentStudents.length === 0){
-            setMsg("No participant map found in cloud for this group.", true);
+          // fallback: keep what user typed
+          students = parseStudentsInput(elStudentsInput.value);
+        }
+
+        currentGroup = g;
+        ensureGroupState(currentGroup);
+
+        const rows = await pullEvaluationsFromCloud(g);
+
+        // Convert to local marks shape
+        if (!marks[currentGroup]) marks[currentGroup] = {};
+        for (const s of students){
+          if (!marks[currentGroup][s]) marks[currentGroup][s] = {};
+        }
+
+        for (const r of rows){
+          const s = r.student;
+          const z = Number(r.zone);
+          const t = r.task;
+          const status = r.status || "";
+          if (!marks[currentGroup][s]) marks[currentGroup][s] = {};
+          if (!marks[currentGroup][s][z]) marks[currentGroup][s][z] = {};
+          if (status){
+            marks[currentGroup][s][z][t] = status;
           }
         }
 
-        currentGroupName = groupName;
-        document.getElementById("groupName").value = currentGroupName;
-        document.getElementById("studentsInput").value = currentStudents.map(s=>s.label).join(", ");
-
-        // Get marks from cloud
-        const evals = await fetchEvaluations(groupName);
-
-        // Replace currentMarks with cloud marks, but keep any pending local ops on top
-        const cloudMarks = {};
-        for(const r of evals){
-          const s = r[COL_STUDENT];
-          const z = r[COL_ZONE];
-          const t = r[COL_TASK];
-          const st = r[COL_STATUS];
-          if(!s || !t || !z || !st) continue;
-          cloudMarks[markKey(s, z, t)] = st;
-        }
-
-        currentMarks = cloudMarks;
-
-        // Re-apply pending ops (local changes not yet synced)
-        for(const op of pendingOps){
-          const p = op.payload;
-          if(op.type === "upsert"){
-            currentMarks[markKey(p.studentLabel, p.zoneId, p.task)] = p.status;
-          }
-          if(op.type === "delete"){
-            delete currentMarks[markKey(p.studentLabel, p.zoneId, p.task)];
-          }
-        }
-
-        renderGrid();
-        saveCurrentToLocal("Pulled from cloud and saved locally.", false);
-      }catch(e){
-        setMsg("Pull from cloud failed. Check RLS policies and column names.", true);
+        // Save local and render
+        lsSaveGroupData(currentGroup);
+        buildGrid();
+        setMsg("Pulled from cloud and saved locally.");
+      }catch (e){
+        setMsg("Failed to pull from cloud.", true);
       }
-    }
+    });
 
-    /**********************************************************************
-     * UI HELPERS
-     **********************************************************************/
-    function refreshLocalGroupsUI(){
-      const sel = document.getElementById("savedGroups");
-      const current = sel.value;
+    // Grid click handler (delegated)
+    elGrid.addEventListener("click", async (ev) => {
+      const target = ev.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (!target.classList.contains("square")) return;
 
-      const groups = listLocalGroups();
-      sel.innerHTML = `<option value="">Select a saved group</option>` +
-        groups.map(g => `<option value="${escapeAttr(g)}">${escapeHtml(g)}</option>`).join("");
+      const g = target.dataset.group;
+      const s = target.dataset.student;
+      const z = Number(target.dataset.zone);
+      const t = target.dataset.task;
+      const status = target.dataset.status;
 
-      if(current && groups.includes(current)) sel.value = current;
-    }
+      // Determine current for that student/task/zone
+      const current = (((marks[g] || {})[s] || {})[z] || {})[t] || "";
 
-    async function refreshCloudGroupsUI(){
-      if(!cloudReachable){
-        setMsg("Cloud is not reachable right now.", true);
+      // Clicking a status sets it, clicking again clears it
+      if (current === status){
+        clearMarkLocal(g, s, z, t);
+        rerenderRowSquares(s, z, t);
+        await tryDeleteMark(g, s, z, t);
+      }else{
+        setMarkLocal(g, s, z, t, status);
+        rerenderRowSquares(s, z, t);
+        await trySyncMark(g, s, z, t, status);
+      }
+    });
+
+    elExportBtn.addEventListener("click", () => {
+      if (!currentGroup || students.length === 0){
+        setMsg("Create or load a group first.", true);
         return;
       }
-      try{
-        const groups = await fetchCloudGroups();
-        const sel = document.getElementById("cloudGroups");
-        sel.innerHTML = `<option value="">Select a cloud group</option>` +
-          groups.map(g => `<option value="${escapeAttr(g)}">${escapeHtml(g)}</option>`).join("");
-        setMsg("Cloud group list refreshed.", false);
-      }catch(e){
-        setMsg("Could not load cloud groups. Check RLS SELECT on courses.", true);
-      }
-    }
-
-    function exportCSV(){
-      if(!currentGroupName || currentStudents.length === 0){
-        setMsg("No group loaded.", true);
-        return;
-      }
-
       const rows = [];
       rows.push(["group_name","student","zone","task","status"].join(","));
 
-      for(const z of ZONES){
-        for(const task of z.tasks){
-          for(const s of currentStudents){
-            const st = getSelectedStatus(s.label, z.id, task) || "";
-            rows.push([
-              csvCell(currentGroupName),
-              csvCell(s.label),
-              csvCell(z.id),
-              csvCell(task),
-              csvCell(st)
-            ].join(","));
+      for (const s of students){
+        for (const z of ZONES){
+          for (const taskName of z.tasks){
+            const status = (((marks[currentGroup] || {})[s] || {})[z.zone] || {})[taskName] || "";
+            rows.push([currentGroup, s, z.zone, `"${taskName.replace(/"/g,'""')}"`, status].join(","));
           }
         }
       }
 
-      const blob = new Blob([rows.join("\n")], { type:"text/csv;charset=utf-8" });
+      const csv = rows.join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
+
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${currentGroupName}-assessment.csv`;
+      a.download = `${currentGroup.replace(/\s+/g,"_")}_assessments.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    }
 
-    function csvCell(v){
-      const s = String(v ?? "");
-      if(/[,"\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
-      return s;
-    }
+      setMsg("CSV exported.");
+    });
 
-    function escapeHtml(s){
-      return String(s ?? "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;");
-    }
-    function escapeAttr(s){
-      return escapeHtml(s).replaceAll("'","&#39;");
-    }
+    elModalClose.addEventListener("click", closeModal);
+    elModalOverlay.addEventListener("click", (e) => {
+      if (e.target === elModalOverlay) closeModal();
+    });
 
-    /**********************************************************************
-     * MODAL
-     **********************************************************************/
-    function openModal(title, content){
-      document.getElementById("modalTitle").textContent = title || "Info";
-      document.getElementById("modalContent").textContent = content || "";
-      document.getElementById("modalBackdrop").style.display = "flex";
-    }
-    function closeModal(){
-      document.getElementById("modalBackdrop").style.display = "none";
-    }
-
-    /**********************************************************************
-     * APPLY LAYOUT
-     **********************************************************************/
-    async function applyLayout(){
-      const groupName = (document.getElementById("groupName").value || "").trim();
-      if(!groupName){
-        setMsg("Please enter a group name.", true);
-        return;
-      }
-
-      const rawStudents = document.getElementById("studentsInput").value || "";
-      const sortMode = document.getElementById("sortMode").value;
-
-      let entries = parseStudents(rawStudents);
-      entries = sortStudents(entries, sortMode);
-
-      if(entries.length === 0){
-        setMsg("Please enter at least one student.", true);
-        return;
-      }
-
-      currentGroupName = groupName;
-      currentStudents = entries.map(e => ({ name:e.name, bib:e.bib, label:displayStudentLabel(e) }));
-      currentMarks = currentMarks || {};
-      pendingOps = pendingOps || [];
-
-      renderGrid();
-      saveCurrentToLocal("Layout applied and saved locally.", false);
-
-      // Ensure course row exists in cloud so other devices see same participant order
-      if(cloudReachable){
-        try{
-          const participantMap = buildParticipantMap(entries);
-          await ensureCourseRow(currentGroupName, participantMap);
-          setMsg("Layout applied. Participant map saved to cloud.", false);
-        }catch(e){
-          setMsg("Layout saved locally. Cloud write failed (check RLS / column name).", true);
-        }
-      }
-    }
-
-    /**********************************************************************
-     * INIT
-     **********************************************************************/
-    function wireUI(){
-      document.getElementById("applyBtn").addEventListener("click", applyLayout);
-
-      document.getElementById("useGroupBtn").addEventListener("click", ()=>{
-        const g = document.getElementById("savedGroups").value;
-        if(!g) return;
-        loadGroupFromLocal(g);
-      });
-
-      document.getElementById("loadLocalBtn").addEventListener("click", ()=>{
-        const g = document.getElementById("savedGroups").value || localStorage.getItem(LS_LAST_GROUP) || "";
-        if(!g){
-          setMsg("Select a saved group first.", true);
-          return;
-        }
-        const ok = loadGroupFromLocal(g);
-        if(!ok) setMsg("Could not load that saved group.", true);
-      });
-
-      document.getElementById("exportBtn").addEventListener("click", exportCSV);
-
-      document.getElementById("pullCloudBtn").addEventListener("click", async ()=>{
-        const g = document.getElementById("cloudGroups").value;
-        if(!g){
-          setMsg("Select a cloud group first.", true);
-          return;
-        }
-        await pullFromCloud(g);
-      });
-
-      document.getElementById("refreshCloudBtn").addEventListener("click", async ()=>{
-        await checkCloudReachable();
-        await refreshCloudGroupsUI();
-      });
-
-      document.getElementById("closeModalBtn").addEventListener("click", closeModal);
-      document.getElementById("modalBackdrop").addEventListener("click", (e)=>{
-        if(e.target.id === "modalBackdrop") closeModal();
-      });
-
-      window.addEventListener("online", async ()=>{
-        await checkCloudReachable();
-        if(cloudReachable){
-          try{
-            await flushPendingOps();
-            document.getElementById("syncText").textContent = "Synced";
-          }catch(e){}
-        }
-      });
-
-      window.addEventListener("offline", ()=>{
-        cloudReachable = false;
-        updateOnlineUI();
-      });
-    }
-
-    (async function init(){
-      wireUI();
-      refreshLocalGroupsUI();
-      await checkCloudReachable();
-      if(cloudReachable){
-        await refreshCloudGroupsUI();
-      }
-
-      const last = localStorage.getItem(LS_LAST_GROUP);
-      if(last){
-        loadGroupFromLocal(last);
-      }
-    })();
+    /***********************
+     * Init
+     ***********************/
+    refreshSavedGroupsDropdown();
+    pingCloud();
+    window.addEventListener("online", pingCloud);
+    window.addEventListener("offline", () => updateOnlineUI(false));
   </script>
 </body>
 </html>
