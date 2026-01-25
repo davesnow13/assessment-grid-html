@@ -446,7 +446,7 @@
       const COURSE_PARTICIPANT_MAP_COL = "participant_map"; // confirmed lowercase
 
       // If your evaluations column is NOT named "mark", change this:
-      const EVAL_MARK_COL = "mark";
+      const EVAL_MARK_COL = "status";
 
       // Unique constraint is: (group_name, student, zone, task)
       const EVAL_ON_CONFLICT = "group_name,student,zone,task";
@@ -733,21 +733,20 @@
        * Cloud: upsert evaluation mark
        ********************/
       async function upsertEvaluationMark({ group_name, student, zone, task, mark }) {
-        const payload = {
-          group_name,
-          student,
-          zone,
-          task,
-          [EVAL_MARK_COL]: mark,
-          updated_at: new Date().toISOString(),
-        };
+  const payload = {
+    group_name,
+    student,
+    zone,
+    task,
+    [EVAL_MARK_COL]: mark,
+  };
 
-        const { error } = await supabaseClient
-          .from(EVALS_TABLE)
-          .upsert(payload, { onConflict: EVAL_ON_CONFLICT });
+  const { error } = await supabaseClient
+    .from(EVALS_TABLE)
+    .upsert(payload, { onConflict: EVAL_ON_CONFLICT });
 
-        if (error) throw error;
-      }
+  if (error) throw error;
+}
 
       /********************
        * Pull group from cloud
