@@ -11,7 +11,7 @@
     <!-- Supabase JS (v2) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <style>
+  <style>
   :root {
     --border: #111;
     --bg: #f4f6f8;
@@ -24,13 +24,13 @@
     --btnDark: #4b4f55;
 
     /* Layout sizing */
-    --taskColW: clamp(160px, 34vw, 280px); /* smaller than before for portrait */
-    --cellW: 54px; /* width of each Inc/Con/Refi cell */
+    --taskColW: clamp(160px, 34vw, 280px);
+    --cellW: 54px;
     --studentHeaderW: calc(var(--cellW) * 3);
 
-    /* Sticky header heights (match actual rendered header heights) */
-    --theadRow1H: 56px; /* "1 Albert" row */
-    --theadRow2H: 48px; /* "Inc Con Refi" row */
+    /* Sticky header offsets (match header row heights) */
+    --theadRow1H: 56px;
+    --theadRow2H: 48px;
   }
 
   body {
@@ -94,13 +94,8 @@
     white-space: nowrap;
   }
 
-  .btn.green {
-    background: var(--btnGreen);
-  }
-
-  .btn.dark {
-    background: var(--btnDark);
-  }
+  .btn.green { background: var(--btnGreen); }
+  .btn.dark { background: var(--btnDark); }
 
   .row2 {
     display: grid;
@@ -137,13 +132,8 @@
     background: #999;
   }
 
-  .dot.online {
-    background: #2ea043;
-  }
-
-  .dot.offline {
-    background: #d1242f;
-  }
+  .dot.online { background: #2ea043; }
+  .dot.offline { background: #d1242f; }
 
   .statusRight {
     font-weight: 900;
@@ -151,13 +141,8 @@
     color: #b45309;
   }
 
-  .statusRight.ok {
-    color: #2f6b2f;
-  }
-
-  .statusRight.bad {
-    color: #b91c1c;
-  }
+  .statusRight.ok { color: #2f6b2f; }
+  .statusRight.bad { color: #b91c1c; }
 
   hr.rule {
     border: none;
@@ -165,7 +150,7 @@
     margin: 14px 0;
   }
 
-  /* Grid wrapper: horizontal scroll, do not squeeze columns */
+  /* Scroll wrapper: THIS is what scrolls horizontally */
   .gridWrap {
     width: 100%;
     overflow: auto;
@@ -174,17 +159,17 @@
     padding-top: 0;
   }
 
+  /* Table: Safari sticky is most reliable with separate borders */
   table.grid {
     border-collapse: separate;
     border-spacing: 0;
     background: #fff;
-    width: max-content; /* prevent squeeze */
+    width: max-content;     /* allow full width, do not squeeze */
     min-width: 100%;
-    table-layout: fixed; /* important: prevents the 3 sub-columns from collapsing */
+    table-layout: fixed;    /* keep cell widths stable */
   }
 
-  th,
-  td {
+  th, td {
     border: 4px solid var(--border);
     padding: 10px 10px;
     vertical-align: middle;
@@ -233,18 +218,10 @@
     text-align: center;
   }
 
-  /* Column backgrounds */
-  .bgInc {
-    background: var(--incBg);
-  }
-
-  .bgCon {
-    background: var(--conBg);
-  }
-
-  .bgRefi {
-    background: var(--refBg);
-  }
+  /* Backgrounds by status column */
+  .bgInc { background: var(--incBg); }
+  .bgCon { background: var(--conBg); }
+  .bgRefi { background: var(--refBg); }
 
   /* Clickable square */
   .box {
@@ -263,27 +240,13 @@
     cursor: pointer;
   }
 
-  /* Checked states, keep check dark, no green default */
-  .checked .box {
-    color: #111;
-  }
+  /* Checked fill matches its column */
+  .checked .box { color: #111; }
+  .checked.bgInc .box { background: #e56a72; border-color: #b34149; }
+  .checked.bgCon .box { background: #e3c251; border-color: #b6952b; }
+  .checked.bgRefi .box { background: #5fb06a; border-color: #3f7e48; }
 
-  .checked.bgInc .box {
-    background: #e56a72;
-    border-color: #b34149;
-  }
-
-  .checked.bgCon .box {
-    background: #e3c251;
-    border-color: #b6952b;
-  }
-
-  .checked.bgRefi .box {
-    background: #5fb06a;
-    border-color: #3f7e48;
-  }
-
-  /* Zone row styling */
+  /* Zone rows */
   td.zoneCell {
     background: #dbeaf7;
     font-weight: 1000;
@@ -371,13 +334,15 @@
     font-weight: 800;
   }
 
-  /* ===== Sticky header + sticky Task column (Safari-friendly layering) ===== */
+  /* ===========================
+     STICKY (iPhone Safari safe)
+     =========================== */
 
   /* Sticky header row 1 */
   table.grid thead tr:first-child th {
     position: sticky;
     top: 0;
-    z-index: 40;
+    z-index: 70;
     background: #efefef;
   }
 
@@ -385,53 +350,46 @@
   table.grid thead tr:nth-child(2) th {
     position: sticky;
     top: var(--theadRow1H);
-    z-index: 35;
+    z-index: 65;
     background: #efefef;
   }
 
-  /* Sticky Task column header cells */
+  /* Sticky task column header cell */
   table.grid thead th.taskHead {
     position: sticky;
     left: 0;
-    z-index: 60;
+    z-index: 90; /* highest */
     background: #efefef;
   }
 
-  /* Sticky Task column body cells */
+  /* Sticky task column body cells */
   table.grid tbody td.taskCell,
   table.grid tbody td.zoneCell {
     position: sticky;
     left: 0;
-    z-index: 20;
+    z-index: 40;
     background: #fff;
   }
 
-  /* Keep zone header background when sticky */
+  /* Zone cell keeps its own background on top */
   table.grid tbody td.zoneCell {
-    z-index: 25;
+    z-index: 50;
     background: #dbeaf7;
   }
 
-  /* Divider line on the right of sticky Task column so overlap looks clean */
+  /* Crisp divider on sticky column edge */
   table.grid th.taskHead,
   table.grid td.taskCell,
   table.grid td.zoneCell {
-    box-shadow: 4px 0 0 #111;
+    box-shadow: 4px 0 0 var(--border);
   }
 
   /* Mobile adjustments */
   @media (max-width: 760px) {
-    h1 {
-      font-size: 38px;
-    }
+    h1 { font-size: 38px; }
 
-    .controls {
-      grid-template-columns: 1fr;
-    }
-
-    .row2 {
-      grid-template-columns: 1fr;
-    }
+    .controls { grid-template-columns: 1fr; }
+    .row2 { grid-template-columns: 1fr; }
 
     .btn {
       width: 100%;
@@ -445,9 +403,7 @@
       --theadRow2H: 46px;
     }
 
-    th.studentHead {
-      font-size: 24px;
-    }
+    th.studentHead { font-size: 24px; }
   }
 </style>
   </head>
