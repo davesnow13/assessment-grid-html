@@ -984,9 +984,13 @@
             // refresh cloud groups list in case group is new
             refreshCloudGroupsDropdown();
           } catch (e) {
-            setCloudStatus({ online: true, message: "Online, but sync failed.", syncState: "bad" });
-            setHint("Sync failed. Check Supabase policies for evaluations INSERT/UPDATE and column names.");
-          }
+  setCloudStatus({ online: true, message: "Online, but sync failed.", syncState: "bad" });
+  const msg =
+    (e && e.message) ? e.message :
+    (typeof e === "string") ? e :
+    JSON.stringify(e);
+  setHint("Sync failed: " + msg);
+}
         });
 
         td.appendChild(box);
