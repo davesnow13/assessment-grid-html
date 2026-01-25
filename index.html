@@ -24,13 +24,13 @@
     --btnDark: #4b4f55;
 
     /* Layout sizing */
-    --taskColW: clamp(160px, 34vw, 280px);
-    --cellW: 54px;
+    --taskColW: clamp(160px, 34vw, 280px); /* portrait-friendly */
+    --cellW: 54px; /* width of each Inc/Con/Refi cell */
     --studentHeaderW: calc(var(--cellW) * 3);
 
-    /* Sticky header offsets (match header row heights) */
-    --theadRow1H: 56px;
-    --theadRow2H: 48px;
+    /* Sticky header heights */
+    --theadRow1H: 56px; /* student row */
+    --theadRow2H: 48px; /* Inc/Con/Refi row */
   }
 
   body {
@@ -94,8 +94,13 @@
     white-space: nowrap;
   }
 
-  .btn.green { background: var(--btnGreen); }
-  .btn.dark { background: var(--btnDark); }
+  .btn.green {
+    background: var(--btnGreen);
+  }
+
+  .btn.dark {
+    background: var(--btnDark);
+  }
 
   .row2 {
     display: grid;
@@ -132,8 +137,13 @@
     background: #999;
   }
 
-  .dot.online { background: #2ea043; }
-  .dot.offline { background: #d1242f; }
+  .dot.online {
+    background: #2ea043;
+  }
+
+  .dot.offline {
+    background: #d1242f;
+  }
 
   .statusRight {
     font-weight: 900;
@@ -141,8 +151,13 @@
     color: #b45309;
   }
 
-  .statusRight.ok { color: #2f6b2f; }
-  .statusRight.bad { color: #b91c1c; }
+  .statusRight.ok {
+    color: #2f6b2f;
+  }
+
+  .statusRight.bad {
+    color: #b91c1c;
+  }
 
   hr.rule {
     border: none;
@@ -150,26 +165,37 @@
     margin: 14px 0;
   }
 
-  /* Scroll wrapper: THIS is what scrolls horizontally */
+  /* =========================
+     GRID WRAPPER (Safari-safe)
+     ========================= */
+
+  /* Only scroll horizontally here (Safari sticky is sensitive to overflow-y) */
   .gridWrap {
     width: 100%;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
     border-top: 4px solid #111;
     padding-top: 0;
   }
 
-  /* Table: Safari sticky is most reliable with separate borders */
   table.grid {
+    /* Key for sticky reliability on Safari */
     border-collapse: separate;
     border-spacing: 0;
+
     background: #fff;
-    width: max-content;     /* allow full width, do not squeeze */
+
+    /* Prevent squeeze, allow horizontal scroll */
+    width: max-content;
     min-width: 100%;
-    table-layout: fixed;    /* keep cell widths stable */
+
+    /* Helps Safari z-index stacking with sticky cells */
+    isolation: isolate;
   }
 
-  th, td {
+  th,
+  td {
     border: 4px solid var(--border);
     padding: 10px 10px;
     vertical-align: middle;
@@ -195,6 +221,7 @@
   td.taskCell {
     font-size: 22px;
     line-height: 1.15;
+    background: #fff; /* ensure sticky cell paints solid */
   }
 
   /* Student header group cell (spans 3) */
@@ -218,10 +245,16 @@
     text-align: center;
   }
 
-  /* Backgrounds by status column */
-  .bgInc { background: var(--incBg); }
-  .bgCon { background: var(--conBg); }
-  .bgRefi { background: var(--refBg); }
+  /* Column backgrounds */
+  .bgInc {
+    background: var(--incBg);
+  }
+  .bgCon {
+    background: var(--conBg);
+  }
+  .bgRefi {
+    background: var(--refBg);
+  }
 
   /* Clickable square */
   .box {
@@ -240,13 +273,27 @@
     cursor: pointer;
   }
 
-  /* Checked fill matches its column */
-  .checked .box { color: #111; }
-  .checked.bgInc .box { background: #e56a72; border-color: #b34149; }
-  .checked.bgCon .box { background: #e3c251; border-color: #b6952b; }
-  .checked.bgRefi .box { background: #5fb06a; border-color: #3f7e48; }
+  /* Checked states (keep check dark, no green default) */
+  .checked .box {
+    color: #111;
+  }
 
-  /* Zone rows */
+  .checked.bgInc .box {
+    background: #e56a72;
+    border-color: #b34149;
+  }
+
+  .checked.bgCon .box {
+    background: #e3c251;
+    border-color: #b6952b;
+  }
+
+  .checked.bgRefi .box {
+    background: #5fb06a;
+    border-color: #3f7e48;
+  }
+
+  /* Zone row styling */
   td.zoneCell {
     background: #dbeaf7;
     font-weight: 1000;
@@ -334,15 +381,15 @@
     font-weight: 800;
   }
 
-  /* ===========================
-     STICKY (iPhone Safari safe)
-     =========================== */
+  /* =========================
+     Sticky header + sticky Task column
+     ========================= */
 
   /* Sticky header row 1 */
   table.grid thead tr:first-child th {
     position: sticky;
     top: 0;
-    z-index: 70;
+    z-index: 40;
     background: #efefef;
   }
 
@@ -350,46 +397,53 @@
   table.grid thead tr:nth-child(2) th {
     position: sticky;
     top: var(--theadRow1H);
-    z-index: 65;
+    z-index: 35;
     background: #efefef;
   }
 
-  /* Sticky task column header cell */
+  /* Sticky Task column header */
   table.grid thead th.taskHead {
     position: sticky;
     left: 0;
-    z-index: 90; /* highest */
+    z-index: 70;
     background: #efefef;
   }
 
-  /* Sticky task column body cells */
+  /* Sticky Task column body cells */
   table.grid tbody td.taskCell,
   table.grid tbody td.zoneCell {
     position: sticky;
     left: 0;
-    z-index: 40;
+    z-index: 50;
     background: #fff;
   }
 
-  /* Zone cell keeps its own background on top */
+  /* Keep zone header background when sticky */
   table.grid tbody td.zoneCell {
-    z-index: 50;
+    z-index: 55;
     background: #dbeaf7;
   }
 
-  /* Crisp divider on sticky column edge */
+  /* Hard divider on right edge of task column so overlap never looks messy */
   table.grid th.taskHead,
   table.grid td.taskCell,
   table.grid td.zoneCell {
-    box-shadow: 4px 0 0 var(--border);
+    box-shadow: 4px 0 0 #111;
   }
 
   /* Mobile adjustments */
   @media (max-width: 760px) {
-    h1 { font-size: 38px; }
+    h1 {
+      font-size: 38px;
+    }
 
-    .controls { grid-template-columns: 1fr; }
-    .row2 { grid-template-columns: 1fr; }
+    .controls {
+      grid-template-columns: 1fr;
+    }
+
+    .row2 {
+      grid-template-columns: 1fr;
+    }
 
     .btn {
       width: 100%;
@@ -403,16 +457,10 @@
       --theadRow2H: 46px;
     }
 
-    th.studentHead { font-size: 24px; }
+    th.studentHead {
+      font-size: 24px;
+    }
   }
-
-  /* DEBUG: make it obvious if sticky rules apply */
-table.grid thead th.taskHead,
-table.grid tbody td.taskCell,
-table.grid tbody td.zoneCell {
-  outline: 6px solid magenta !important;
-  background: #fff !important;
-}
 </style>
   </head>
 
