@@ -11,411 +11,426 @@
     <!-- Supabase JS (v2) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <style>
-      :root {
-        --border: #111;
-        --bg: #f4f6f8;
+   <style>
+  :root {
+    --border: #111;
+    --bg: #f4f6f8;
 
-        --incBg: #f8e6e8;
-        --conBg: #f7f2dc;
-        --refBg: #e5f3e6;
+    --incBg: #f8e6e8;
+    --conBg: #f7f2dc;
+    --refBg: #e5f3e6;
 
-        --btnGreen: #2f6b2f;
-        --btnDark: #4b4f55;
+    --btnGreen: #2f6b2f;
+    --btnDark: #4b4f55;
 
-        /* Layout sizing */
-        --taskColW: clamp(160px, 34vw, 280px);
-        --cellW: 54px;
-        --studentHeaderW: calc(var(--cellW) * 3);
+    /* Layout sizing */
+    --taskColW: clamp(160px, 34vw, 280px);
+    --cellW: 54px;
+    --studentHeaderW: calc(var(--cellW) * 3);
 
-        /* Sticky header row heights (tune if needed) */
-        --theadRow1H: 56px;
-        --theadRow2H: 48px;
-      }
+    /* Sticky header row heights (tune if needed) */
+    --theadRow1H: 56px;
+    --theadRow2H: 48px;
+  }
 
-      body {
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-        background: var(--bg);
-        margin: 16px;
-        color: #111;
-      }
+  body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: var(--bg);
+    margin: 16px;
+    color: #111;
+  }
 
-      h1 {
-        margin: 0 0 6px;
-        font-size: 44px;
-        letter-spacing: -0.5px;
-      }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 44px;
+    letter-spacing: -0.5px;
+  }
 
-      .sub {
-        margin: 0 0 14px;
-        color: #333;
-        font-size: 16px;
-      }
+  .sub {
+    margin: 0 0 14px;
+    color: #333;
+    font-size: 16px;
+  }
 
-      .controls {
-        display: grid;
-        grid-template-columns: 1fr 1fr auto auto auto;
-        gap: 10px 14px;
-        align-items: center;
-        max-width: 1200px;
-      }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto auto auto;
+    gap: 10px 14px;
+    align-items: center;
+    max-width: 1200px;
+  }
 
-      .controls label {
-        display: grid;
-        gap: 6px;
-        font-weight: 700;
-      }
+  .controls label {
+    display: grid;
+    gap: 6px;
+    font-weight: 700;
+  }
 
-      input[type="text"] {
-        padding: 10px 12px;
-        border-radius: 8px;
-        border: 2px solid #c9d1d9;
-        background: #fff;
-        font-size: 16px;
-      }
+  input[type="text"] {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 2px solid #c9d1d9;
+    background: #fff;
+    font-size: 16px;
+  }
 
-      select {
-        padding: 10px 12px;
-        border-radius: 8px;
-        border: 2px solid #c9d1d9;
-        background: #fff;
-        font-size: 16px;
-        width: 100%;
-      }
+  select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 2px solid #c9d1d9;
+    background: #fff;
+    font-size: 16px;
+    width: 100%;
+  }
 
-      .btn {
-        border: none;
-        border-radius: 10px;
-        padding: 12px 16px;
-        font-size: 18px;
-        font-weight: 800;
-        color: #fff;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      .btn.green {
-        background: var(--btnGreen);
-      }
-      .btn.dark {
-        background: var(--btnDark);
-      }
+  .btn {
+    border: none;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn.green {
+    background: var(--btnGreen);
+  }
+  .btn.dark {
+    background: var(--btnDark);
+  }
 
-      .row2 {
-        display: grid;
-        grid-template-columns: 1fr auto auto;
-        gap: 10px 14px;
-        align-items: end;
-        max-width: 1200px;
-        margin-top: 10px;
-      }
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px 14px;
+    align-items: end;
+    max-width: 1200px;
+    margin-top: 10px;
+  }
 
-      .status {
-        margin-top: 12px;
-        border: 2px solid #c9d1d9;
-        border-radius: 10px;
-        padding: 12px 14px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: #fff;
-      }
-      .statusLeft {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        font-weight: 800;
-        font-size: 20px;
-      }
-      .dot {
-        width: 18px;
-        height: 18px;
-        border-radius: 999px;
-        background: #999;
-      }
-      .dot.online {
-        background: #2ea043;
-      }
-      .dot.offline {
-        background: #d1242f;
-      }
-      .statusRight {
-        font-weight: 900;
-        font-size: 22px;
-        color: #b45309;
-      }
-      .statusRight.ok {
-        color: #2f6b2f;
-      }
-      .statusRight.bad {
-        color: #b91c1c;
-      }
+  .status {
+    margin-top: 12px;
+    border: 2px solid #c9d1d9;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+  }
+  .statusLeft {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-weight: 800;
+    font-size: 20px;
+  }
+  .dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: #999;
+  }
+  .dot.online {
+    background: #2ea043;
+  }
+  .dot.offline {
+    background: #d1242f;
+  }
+  .statusRight {
+    font-weight: 900;
+    font-size: 22px;
+    color: #b45309;
+  }
+  .statusRight.ok {
+    color: #2f6b2f;
+  }
+  .statusRight.bad {
+    color: #b91c1c;
+  }
 
-      hr.rule {
-        border: none;
-        border-top: 6px solid #111;
-        margin: 14px 0;
-      }
+  hr.rule {
+    border: none;
+    border-top: 6px solid #111;
+    margin: 14px 0;
+  }
 
-      .hint {
-        margin-top: 8px;
-        color: #b91c1c;
-        font-weight: 800;
-      }
+  .hint {
+    margin-top: 8px;
+    color: #b91c1c;
+    font-weight: 800;
+  }
 
-      /* ===== Option A layout ===== */
+  /* ===== Option A layout ===== */
 
-      .gridYScroll {
-        width: 100%;
-        max-height: 78vh; /* allows one vertical scroll area */
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        border-top: 4px solid #111;
-        background: #fff;
-      }
+  .gridYScroll {
+    width: 100%;
+    max-height: 78vh; /* allows one vertical scroll area */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border-top: 4px solid #111;
+    background: #fff;
+  }
 
-      .gridRow {
-        display: flex;
-        align-items: stretch;
-        width: 100%;
-      }
+  .gridRow {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+  }
 
-      .taskPane {
-        flex: 0 0 var(--taskColW);
-        width: var(--taskColW);
-        border-right: 4px solid #111;
-        background: #fff;
-      }
+  .taskPane {
+    flex: 0 0 var(--taskColW);
+    width: var(--taskColW);
+    border-right: 4px solid #111;
+    background: #fff;
+  }
 
-      .marksPane {
-        flex: 1 1 auto;
-        overflow-x: auto; /* independent horizontal scroll */
-        -webkit-overflow-scrolling: touch;
-        background: #fff;
-      }
+  .marksPane {
+    flex: 1 1 auto;
+    overflow-x: auto; /* independent horizontal scroll */
+    -webkit-overflow-scrolling: touch;
+    background: #fff;
+  }
 
-      table.grid {
-        border-collapse: separate;
-        border-spacing: 0;
-        background: #fff;
-        table-layout: fixed;
-      }
+  table.grid {
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+    table-layout: fixed;
+  }
 
-      table.gridTask {
-        width: var(--taskColW);
-      }
+  table.gridTask {
+    width: var(--taskColW);
+  }
 
-      table.gridMarks {
-        width: max-content;
-        min-width: 100%;
-      }
+  table.gridMarks {
+    width: max-content;
+    min-width: 100%;
+  }
 
-      th,
-      td {
-        border: 4px solid var(--border);
-        padding: 10px 10px;
-        vertical-align: middle;
-        background-clip: padding-box;
-      }
+  th,
+  td {
+    border: 4px solid var(--border);
+    padding: 10px 10px;
+    vertical-align: middle;
+    background-clip: padding-box;
+  }
 
-      th {
-        background: #efefef;
-        font-weight: 900;
-        text-align: center;
-      }
+  th {
+    background: #efefef;
+    font-weight: 900;
+    text-align: center;
+  }
 
-      /* Sticky headers for both tables inside the same vertical scroll container */
-      .gridYScroll table.grid thead tr:first-child th {
-        position: sticky;
-        top: 0;
-        z-index: 50;
-        background: #efefef;
-      }
-      .gridYScroll table.grid thead tr:nth-child(2) th {
-        position: sticky;
-        top: var(--theadRow1H);
-        z-index: 45;
-        background: #efefef;
-      }
+  /* ==========================================================
+     Sticky behavior FIX
+     - Headers stick ONLY on the marks table
+     - Task table header cells scroll vertically with tasks
+     ========================================================== */
 
-      /* Task column cells */
-      th.taskHead,
-      td.taskCell,
-      td.zoneCell {
-        text-align: left;
-      }
+  /* Sticky headers for MARKS table only */
+  #marksTable thead tr:first-child th {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: #efefef;
+  }
 
-      td.taskCell {
-        font-size: 22px;
-        line-height: 1.15;
-      }
+  #marksTable thead tr:nth-child(2) th {
+    position: sticky;
+    top: var(--theadRow1H);
+    z-index: 45;
+    background: #efefef;
+  }
 
-      /* Student header group cell (spans 3) */
-      th.studentHead {
-        min-width: var(--studentHeaderW);
-        width: var(--studentHeaderW);
-        font-size: 28px;
-      }
+  /* Ensure TASK table headers scroll normally */
+  #taskTable thead th {
+    position: static;
+    top: auto;
+    z-index: auto;
+    background: #efefef;
+  }
 
-      th.subHead {
-        font-size: 20px;
-        padding: 8px 0;
-        min-width: var(--cellW);
-        width: var(--cellW);
-      }
+  /* Task column cells */
+  th.taskHead,
+  td.taskCell,
+  td.zoneCell {
+    text-align: left;
+  }
 
-      td.markCell {
-        min-width: var(--cellW);
-        width: var(--cellW);
-        padding: 10px 6px;
-        text-align: center;
-      }
+  td.taskCell {
+    font-size: 22px;
+    line-height: 1.15;
+  }
 
-      .bgInc {
-        background: var(--incBg);
-      }
-      .bgCon {
-        background: var(--conBg);
-      }
-      .bgRefi {
-        background: var(--refBg);
-      }
+  /* Student header group cell (spans 3) */
+  th.studentHead {
+    min-width: var(--studentHeaderW);
+    width: var(--studentHeaderW);
+    font-size: 28px;
+  }
 
-      .box {
-        width: 46px;
-        height: 46px;
-        border-radius: 10px;
-        border: 3px solid #9aa4af;
-        background: #e9edf1;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 28px;
-        font-weight: 1000;
-        color: #111;
-        user-select: none;
-        cursor: pointer;
-      }
+  th.subHead {
+    font-size: 20px;
+    padding: 8px 0;
+    min-width: var(--cellW);
+    width: var(--cellW);
+  }
 
-      .checked .box {
-        color: #111;
-      }
-      .checked.bgInc .box {
-        background: #e56a72;
-        border-color: #b34149;
-      }
-      .checked.bgCon .box {
-        background: #e3c251;
-        border-color: #b6952b;
-      }
-      .checked.bgRefi .box {
-        background: #5fb06a;
-        border-color: #3f7e48;
-      }
+  td.markCell {
+    min-width: var(--cellW);
+    width: var(--cellW);
+    padding: 10px 6px;
+    text-align: center;
+  }
 
-      /* Zone row styling */
-      td.zoneCell {
-        background: #dbeaf7;
-        font-weight: 1000;
-        font-size: 40px;
-        letter-spacing: -0.5px;
-      }
+  .bgInc {
+    background: var(--incBg);
+  }
+  .bgCon {
+    background: var(--conBg);
+  }
+  .bgRefi {
+    background: var(--refBg);
+  }
 
-      .zoneSub {
-        display: block;
-        margin-top: 6px;
-        font-size: 24px;
-        font-weight: 900;
-        opacity: 0.75;
-      }
+  .box {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    border: 3px solid #9aa4af;
+    background: #e9edf1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 1000;
+    color: #111;
+    user-select: none;
+    cursor: pointer;
+  }
 
-      .infoBtn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 34px;
-        height: 34px;
-        border-radius: 999px;
-        border: 3px solid #111;
-        background: #fff;
-        font-weight: 900;
-        font-size: 20px;
-        line-height: 1;
-        margin-left: 10px;
-        cursor: pointer;
-        user-select: none;
-      }
+  .checked .box {
+    color: #111;
+  }
+  .checked.bgInc .box {
+    background: #e56a72;
+    border-color: #b34149;
+  }
+  .checked.bgCon .box {
+    background: #e3c251;
+    border-color: #b6952b;
+  }
+  .checked.bgRefi .box {
+    background: #5fb06a;
+    border-color: #3f7e48;
+  }
 
-      /* Modal */
-      .modalOverlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.55);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        z-index: 9999;
-      }
-      .modal {
-        width: min(820px, 96vw);
-        background: #fff;
-        border-radius: 14px;
-        border: 2px solid #c9d1d9;
-        overflow: hidden;
-      }
-      .modalHead {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 14px 16px;
-        background: #f3f4f6;
-        border-bottom: 2px solid #c9d1d9;
-        font-weight: 900;
-        font-size: 18px;
-      }
-      .modalBody {
-        padding: 16px;
-        font-size: 16px;
-        line-height: 1.45;
-        white-space: pre-wrap;
-      }
-      .modalClose {
-        background: #111;
-        color: #fff;
-        border: none;
-        border-radius: 10px;
-        padding: 10px 12px;
-        cursor: pointer;
-        font-weight: 900;
-      }
+  /* Zone row styling */
+  td.zoneCell {
+    background: #dbeaf7;
+    font-weight: 1000;
+    font-size: 40px;
+    letter-spacing: -0.5px;
+  }
 
-      @media (max-width: 760px) {
-        h1 {
-          font-size: 38px;
-        }
-        .controls {
-          grid-template-columns: 1fr;
-        }
-        .row2 {
-          grid-template-columns: 1fr;
-        }
-        .btn {
-          width: 100%;
-          justify-self: start;
-        }
+  .zoneSub {
+    display: block;
+    margin-top: 6px;
+    font-size: 24px;
+    font-weight: 900;
+    opacity: 0.75;
+  }
 
-        :root {
-          --taskColW: clamp(150px, 42vw, 240px);
-          --cellW: 52px;
-          --theadRow1H: 54px;
-          --theadRow2H: 46px;
-        }
+  .infoBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 3px solid #111;
+    background: #fff;
+    font-weight: 900;
+    font-size: 20px;
+    line-height: 1;
+    margin-left: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
 
-        th.studentHead {
-          font-size: 24px;
-        }
-      }
-    </style>
+  /* Modal */
+  .modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 9999;
+  }
+  .modal {
+    width: min(820px, 96vw);
+    background: #fff;
+    border-radius: 14px;
+    border: 2px solid #c9d1d9;
+    overflow: hidden;
+  }
+  .modalHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: #f3f4f6;
+    border-bottom: 2px solid #c9d1d9;
+    font-weight: 900;
+    font-size: 18px;
+  }
+  .modalBody {
+    padding: 16px;
+    font-size: 16px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+  .modalClose {
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-weight: 900;
+  }
+
+  @media (max-width: 760px) {
+    h1 {
+      font-size: 38px;
+    }
+    .controls {
+      grid-template-columns: 1fr;
+    }
+    .row2 {
+      grid-template-columns: 1fr;
+    }
+    .btn {
+      width: 100%;
+      justify-self: start;
+    }
+
+    :root {
+      --taskColW: clamp(150px, 42vw, 240px);
+      --cellW: 52px;
+      --theadRow1H: 54px;
+      --theadRow2H: 46px;
+    }
+
+    th.studentHead {
+      font-size: 24px;
+    }
+  }
+</style>
   </head>
 
   <body>
