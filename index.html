@@ -11,414 +11,415 @@
     <!-- Supabase JS (v2) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <style>
-  :root {
-    --border: #111;
-    --bg: #f4f6f8;
+    <style>
+      :root {
+        --border: #111;
+        --bg: #f4f6f8;
 
-    --incBg: #f8e6e8; /* light red */
-    --conBg: #f7f2dc; /* light yellow */
-    --refBg: #e5f3e6; /* light green */
+        --incBg: #f8e6e8;
+        --conBg: #f7f2dc;
+        --refBg: #e5f3e6;
 
-    --btnGreen: #2f6b2f;
-    --btnDark: #4b4f55;
+        --btnGreen: #2f6b2f;
+        --btnDark: #4b4f55;
 
-    /* Layout sizing */
-    --taskColW: clamp(160px, 34vw, 280px); /* portrait-friendly */
-    --cellW: 54px; /* width of each Inc/Con/Refi cell */
-    --studentHeaderW: calc(var(--cellW) * 3);
+        /* Option A sizing */
+        --taskColW: clamp(160px, 34vw, 280px);
+        --cellW: 54px;
+        --studentHeaderW: calc(var(--cellW) * 3);
 
-    /* Sticky header offsets (good-enough defaults) */
-    --theadRow1H: 56px;
-    --theadRow2H: 48px;
-  }
+        /* Sticky header heights (tune if needed) */
+        --theadRow1H: 56px;
+        --theadRow2H: 48px;
+      }
 
-  body {
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    background: var(--bg);
-    margin: 16px;
-    color: #111;
-  }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        background: var(--bg);
+        margin: 16px;
+        color: #111;
+      }
 
-  h1 {
-    margin: 0 0 6px;
-    font-size: 44px;
-    letter-spacing: -0.5px;
-  }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 44px;
+        letter-spacing: -0.5px;
+      }
 
-  .sub {
-    margin: 0 0 14px;
-    color: #333;
-    font-size: 16px;
-  }
+      .sub {
+        margin: 0 0 14px;
+        color: #333;
+        font-size: 16px;
+      }
 
-  .controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto auto auto;
-    gap: 10px 14px;
-    align-items: center;
-    max-width: 1200px;
-  }
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto auto auto;
+        gap: 10px 14px;
+        align-items: center;
+        max-width: 1200px;
+      }
 
-  .controls label {
-    display: grid;
-    gap: 6px;
-    font-weight: 700;
-  }
+      .controls label {
+        display: grid;
+        gap: 6px;
+        font-weight: 700;
+      }
 
-  input[type="text"] {
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 2px solid #c9d1d9;
-    background: #fff;
-    font-size: 16px;
-  }
+      input[type="text"] {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 2px solid #c9d1d9;
+        background: #fff;
+        font-size: 16px;
+      }
 
-  select {
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 2px solid #c9d1d9;
-    background: #fff;
-    font-size: 16px;
-    width: 100%;
-  }
+      select {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 2px solid #c9d1d9;
+        background: #fff;
+        font-size: 16px;
+        width: 100%;
+      }
 
-  .btn {
-    border: none;
-    border-radius: 10px;
-    padding: 12px 16px;
-    font-size: 18px;
-    font-weight: 800;
-    color: #fff;
-    cursor: pointer;
-    white-space: nowrap;
-  }
+      .btn {
+        border: none;
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .btn.green {
+        background: var(--btnGreen);
+      }
+      .btn.dark {
+        background: var(--btnDark);
+      }
 
-  .btn.green { background: var(--btnGreen); }
-  .btn.dark  { background: var(--btnDark); }
+      .row2 {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 10px 14px;
+        align-items: end;
+        max-width: 1200px;
+        margin-top: 10px;
+      }
 
-  .row2 {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 10px 14px;
-    align-items: end;
-    max-width: 1200px;
-    margin-top: 10px;
-  }
+      .status {
+        margin-top: 12px;
+        border: 2px solid #c9d1d9;
+        border-radius: 10px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #fff;
+      }
 
-  .status {
-    margin-top: 12px;
-    border: 2px solid #c9d1d9;
-    border-radius: 10px;
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #fff;
-  }
+      .statusLeft {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        font-weight: 800;
+        font-size: 20px;
+      }
 
-  .statusLeft {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    font-weight: 800;
-    font-size: 20px;
-  }
+      .dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: #999;
+      }
+      .dot.online {
+        background: #2ea043;
+      }
+      .dot.offline {
+        background: #d1242f;
+      }
 
-  .dot {
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    background: #999;
-  }
+      .statusRight {
+        font-weight: 900;
+        font-size: 22px;
+        color: #b45309;
+      }
+      .statusRight.ok {
+        color: #2f6b2f;
+      }
+      .statusRight.bad {
+        color: #b91c1c;
+      }
 
-  .dot.online { background: #2ea043; }
-  .dot.offline { background: #d1242f; }
+      hr.rule {
+        border: none;
+        border-top: 6px solid #111;
+        margin: 14px 0;
+      }
 
-  .statusRight {
-    font-weight: 900;
-    font-size: 22px;
-    color: #b45309;
-  }
+      .hint {
+        margin-top: 8px;
+        color: #b91c1c;
+        font-weight: 800;
+      }
 
-  .statusRight.ok { color: #2f6b2f; }
-  .statusRight.bad { color: #b91c1c; }
+      /* ========= Option A layout: single vertical scroll, right side horizontal scroll ========= */
 
-  hr.rule {
-    border: none;
-    border-top: 6px solid #111;
-    margin: 14px 0;
-  }
+      .gridYScroll {
+        width: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        border-top: 4px solid #111;
+      }
 
-  /* =========================
-     GRID WRAPPER + TABLE
-     ========================= */
+      .gridRow {
+        display: flex;
+        align-items: stretch;
+        width: 100%;
+      }
 
-  /* IMPORTANT: this is the scroll container for sticky left column */
-  .gridWrap {
-    width: 100%;
-    overflow-x: auto;
-    overflow-y: visible; /* keep sticky working */
-    -webkit-overflow-scrolling: touch;
+      .taskPane {
+        flex: 0 0 var(--taskColW);
+        width: var(--taskColW);
+        border-right: 4px solid #111;
+        background: #fff;
+      }
 
-    border-top: 4px solid #111;
-    background: transparent;
+      .marksPane {
+        flex: 1 1 auto;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        background: #fff;
+      }
 
-    /* Safari stacking helper */
-    position: relative;
-  }
+      table.grid {
+        border-collapse: separate;
+        border-spacing: 0;
+        background: #fff;
+        table-layout: fixed;
+      }
 
-  table.grid {
-    border-collapse: separate;
-    border-spacing: 0;
-    background: #fff;
+      table.gridTask {
+        width: var(--taskColW);
+      }
 
-    width: max-content;  /* no squeeze */
-    min-width: 100%;
+      table.gridMarks {
+        width: max-content;
+        min-width: 100%;
+      }
 
-    /* Safari sticky + z-index reliability */
-    isolation: isolate;
-    position: relative;
-  }
+      th,
+      td {
+        border: 4px solid var(--border);
+        padding: 10px 10px;
+        vertical-align: middle;
+        background-clip: padding-box;
+      }
 
-  th,
-  td {
-    border: 4px solid var(--border);
-    padding: 10px 10px;
-    vertical-align: middle;
-    background-clip: padding-box;
-  }
+      th {
+        background: #efefef;
+        font-weight: 900;
+        text-align: center;
+      }
 
-  th {
-    background: #efefef;
-    font-weight: 900;
-    text-align: center;
-  }
+      /* Sticky header rows (both tables) */
+      table.grid thead tr:first-child th {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: #efefef;
+      }
 
-  /* Task column sizing */
-  th.taskHead,
-  td.taskCell,
-  td.zoneCell {
-    width: var(--taskColW);
-    min-width: var(--taskColW);
-    max-width: var(--taskColW);
-    text-align: left;
-    white-space: normal;
-    word-break: break-word;
-  }
+      table.grid thead tr:nth-child(2) th {
+        position: sticky;
+        top: var(--theadRow1H);
+        z-index: 45;
+        background: #efefef;
+      }
 
-  td.taskCell {
-    font-size: 22px;
-    line-height: 1.15;
-  }
+      th.taskHead,
+      td.taskCell,
+      td.zoneCell {
+        text-align: left;
+      }
 
-  /* Student header (spans 3) */
-  th.studentHead {
-    min-width: var(--studentHeaderW);
-    width: var(--studentHeaderW);
-    font-size: 28px;
-  }
+      td.taskCell {
+        font-size: 22px;
+        line-height: 1.15;
+      }
 
-  th.subHead {
-    font-size: 20px;
-    padding: 8px 0;
-    min-width: var(--cellW);
-    width: var(--cellW);
-  }
+      th.studentHead {
+        min-width: var(--studentHeaderW);
+        width: var(--studentHeaderW);
+        font-size: 28px;
+      }
 
-  td.markCell {
-    min-width: var(--cellW);
-    width: var(--cellW);
-    padding: 10px 6px;
-    text-align: center;
-  }
+      th.subHead {
+        font-size: 20px;
+        padding: 8px 0;
+        min-width: var(--cellW);
+        width: var(--cellW);
+      }
 
-  /* Column backgrounds */
-  .bgInc { background: var(--incBg); }
-  .bgCon { background: var(--conBg); }
-  .bgRefi { background: var(--refBg); }
+      td.markCell {
+        min-width: var(--cellW);
+        width: var(--cellW);
+        padding: 10px 6px;
+        text-align: center;
+      }
 
-  /* Clickable square */
-  .box {
-    width: 46px;
-    height: 46px;
-    border-radius: 10px;
-    border: 3px solid #9aa4af;
-    background: #e9edf1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    font-weight: 1000;
-    color: #111;
-    user-select: none;
-    cursor: pointer;
-  }
+      .bgInc {
+        background: var(--incBg);
+      }
+      .bgCon {
+        background: var(--conBg);
+      }
+      .bgRefi {
+        background: var(--refBg);
+      }
 
-  /* Checked states, keep check dark */
-  .checked .box { color: #111; }
-  .checked.bgInc .box { background: #e56a72; border-color: #b34149; }
-  .checked.bgCon .box { background: #e3c251; border-color: #b6952b; }
-  .checked.bgRefi .box { background: #5fb06a; border-color: #3f7e48; }
+      .box {
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+        border: 3px solid #9aa4af;
+        background: #e9edf1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        font-weight: 1000;
+        color: #111;
+        user-select: none;
+        cursor: pointer;
+      }
 
-  /* Zone row styling */
-  td.zoneCell {
-    background: #dbeaf7;
-    font-weight: 1000;
-    font-size: 40px;
-    letter-spacing: -0.5px;
-  }
+      .checked .box {
+        color: #111;
+      }
 
-  .zoneSub {
-    display: block;
-    margin-top: 6px;
-    font-size: 24px;
-    font-weight: 900;
-    opacity: 0.75;
-  }
+      .checked.bgInc .box {
+        background: #e56a72;
+        border-color: #b34149;
+      }
+      .checked.bgCon .box {
+        background: #e3c251;
+        border-color: #b6952b;
+      }
+      .checked.bgRefi .box {
+        background: #5fb06a;
+        border-color: #3f7e48;
+      }
 
-  /* Info button (lowercase i) */
-  .infoBtn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 999px;
-    border: 3px solid #111;
-    background: #fff;
-    font-weight: 900;
-    font-size: 20px;
-    line-height: 1;
-    margin-left: 10px;
-    cursor: pointer;
-    user-select: none;
-  }
+      td.zoneCell {
+        background: #dbeaf7;
+        font-weight: 1000;
+        font-size: 40px;
+        letter-spacing: -0.5px;
+      }
 
-  /* =========================
-     STICKY HEADER + STICKY TASK COLUMN
-     ========================= */
+      .zoneSub {
+        display: block;
+        margin-top: 6px;
+        font-size: 24px;
+        font-weight: 900;
+        opacity: 0.75;
+      }
 
-  /* Sticky header row 1 */
-  table.grid thead tr:first-child th {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    background: #efefef;
-  }
+      .infoBtn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 3px solid #111;
+        background: #fff;
+        font-weight: 900;
+        font-size: 20px;
+        line-height: 1;
+        margin-left: 10px;
+        cursor: pointer;
+        user-select: none;
+      }
 
-  /* Sticky header row 2 */
-  table.grid thead tr:nth-child(2) th {
-    position: sticky;
-    top: var(--theadRow1H);
-    z-index: 35;
-    background: #efefef;
-  }
+      /* Modal */
+      .modalOverlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        z-index: 9999;
+      }
 
-  /* Sticky Task column header cells */
-  table.grid thead th.taskHead {
-    position: sticky;
-    left: 0;
-    z-index: 80;
-    background: #efefef;
-  }
+      .modal {
+        width: min(820px, 96vw);
+        background: #fff;
+        border-radius: 14px;
+        border: 2px solid #c9d1d9;
+        overflow: hidden;
+      }
 
-  /* Sticky Task column body cells */
-  table.grid tbody td.taskCell,
-  table.grid tbody td.zoneCell {
-    position: sticky;
-    left: 0;
-    z-index: 60;
-    background: #fff;
-  }
+      .modalHead {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 16px;
+        background: #f3f4f6;
+        border-bottom: 2px solid #c9d1d9;
+        font-weight: 900;
+        font-size: 18px;
+      }
 
-  /* Keep zone background when sticky */
-  table.grid tbody td.zoneCell {
-    z-index: 65;
-    background: #dbeaf7;
-  }
+      .modalBody {
+        padding: 16px;
+        font-size: 16px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
 
-  /* Clean divider so headers don't slide over task column */
-  table.grid th.taskHead,
-  table.grid td.taskCell,
-  table.grid td.zoneCell {
-    box-shadow: 4px 0 0 #111;
-  }
+      .modalClose {
+        background: #111;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 12px;
+        cursor: pointer;
+        font-weight: 900;
+      }
 
-  /* =========================
-     MODAL
-     ========================= */
-  .modalOverlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-    z-index: 9999;
-  }
+      @media (max-width: 760px) {
+        h1 {
+          font-size: 38px;
+        }
+        .controls {
+          grid-template-columns: 1fr;
+        }
+        .row2 {
+          grid-template-columns: 1fr;
+        }
+        .btn {
+          width: 100%;
+          justify-self: start;
+        }
 
-  .modal {
-    width: min(820px, 96vw);
-    background: #fff;
-    border-radius: 14px;
-    border: 2px solid #c9d1d9;
-    overflow: hidden;
-  }
+        :root {
+          --taskColW: clamp(150px, 42vw, 240px);
+          --cellW: 52px;
+          --theadRow1H: 54px;
+          --theadRow2H: 46px;
+        }
 
-  .modalHead {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 16px;
-    background: #f3f4f6;
-    border-bottom: 2px solid #c9d1d9;
-    font-weight: 900;
-    font-size: 18px;
-  }
-
-  .modalBody {
-    padding: 16px;
-    font-size: 16px;
-    line-height: 1.45;
-    white-space: pre-wrap;
-  }
-
-  .modalClose {
-    background: #111;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 12px;
-    cursor: pointer;
-    font-weight: 900;
-  }
-
-  .hint {
-    margin-top: 8px;
-    color: #b91c1c;
-    font-weight: 800;
-  }
-
-  /* Mobile */
-  @media (max-width: 760px) {
-    h1 { font-size: 38px; }
-
-    .controls { grid-template-columns: 1fr; }
-    .row2 { grid-template-columns: 1fr; }
-    .btn { width: 100%; justify-self: start; }
-
-    :root {
-      --taskColW: clamp(150px, 42vw, 240px);
-      --cellW: 52px;
-      --theadRow1H: 54px;
-      --theadRow2H: 46px;
-    }
-
-    th.studentHead { font-size: 24px; }
-  }
-</style>
+        th.studentHead {
+          font-size: 24px;
+        }
+      }
+    </style>
   </head>
 
   <body>
@@ -431,7 +432,11 @@
     <div class="controls">
       <label>
         Group name:
-        <input id="groupName" type="text" placeholder="Example: Lake Louise Group A" />
+        <input
+          id="groupName"
+          type="text"
+          placeholder="Example: Lake Louise Group A"
+        />
       </label>
 
       <label>
@@ -472,8 +477,23 @@
 
     <hr class="rule" />
 
-    <div class="gridWrap">
-      <table class="grid" id="gridTable"></table>
+    <!-- Option A container -->
+    <div class="gridYScroll" id="gridYScroll">
+      <div class="gridRow">
+        <div class="taskPane">
+          <table class="grid gridTask" id="taskTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="marksPane" id="marksPane">
+          <table class="grid gridMarks" id="marksTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- Info Modal -->
@@ -494,7 +514,10 @@
       const SUPABASE_URL = "https://ynlzmelrlbgflcabvvfs.supabase.co";
       const SUPABASE_ANON_KEY =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlubHptZWxybGJnZmxjYWJ2dmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTYwNjYsImV4cCI6MjA3OTk5MjA2Nn0.6ylCGmMmKsShchJxsTLsLbIHwdKra0bxu4dRgs86jkE";
-      const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const supabaseClient = supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+      );
 
       // Tables / columns
       const COURSES_TABLE = "courses";
@@ -502,9 +525,9 @@
 
       const COURSE_GROUP_COL = "group_name";
       const COURSE_CLOSED_COL = "is_closed";
-      const COURSE_PARTICIPANT_MAP_COL = "participant_map"; // confirmed lowercase
+      const COURSE_PARTICIPANT_MAP_COL = "participant_map"; // lowercase confirmed
 
-      // If your evaluations column is NOT named "mark", change this:
+      // Evaluations table column for mark
       const EVAL_MARK_COL = "status";
 
       // Unique constraint is: (group_name, student, zone, task)
@@ -595,7 +618,7 @@
       let marks = {}; // key: zone|task|studentLabel => "Inc"|"Con"|"Refi"|"" (one chosen)
 
       /********************
-       * Elements
+       * Elements (Step 1 fix)
        ********************/
       const elGroupName = document.getElementById("groupName");
       const elStudents = document.getElementById("studentsInput");
@@ -606,7 +629,10 @@
       const elUseGroup = document.getElementById("useGroupBtn");
       const elPullCloud = document.getElementById("pullCloudBtn");
 
-      const elGrid = document.getElementById("gridTable");
+      const elTaskTable = document.getElementById("taskTable");
+      const elMarksTable = document.getElementById("marksTable");
+      const elMarksPane = document.getElementById("marksPane");
+      const elGridYScroll = document.getElementById("gridYScroll");
 
       const elStatusDot = document.getElementById("statusDot");
       const elStatusText = document.getElementById("statusText");
@@ -660,12 +686,20 @@
 
       function saveMarksLocal() {
         if (!currentGroup) return;
-        localStorage.setItem(LS_MARKS_PREFIX + currentGroup, JSON.stringify(marks));
+        localStorage.setItem(
+          LS_MARKS_PREFIX + currentGroup,
+          JSON.stringify(marks)
+        );
         localStorage.setItem(LS_LAST_USED, currentGroup);
-        // keep local group list
-        const list = new Set(JSON.parse(localStorage.getItem(LS_GROUP_LIST) || "[]"));
+
+        const list = new Set(
+          JSON.parse(localStorage.getItem(LS_GROUP_LIST) || "[]")
+        );
         list.add(currentGroup);
-        localStorage.setItem(LS_GROUP_LIST, JSON.stringify([...list].sort()));
+        localStorage.setItem(
+          LS_GROUP_LIST,
+          JSON.stringify([...list].sort())
+        );
       }
 
       function loadMarksLocal(groupName) {
@@ -688,7 +722,6 @@
       });
 
       function parseParticipants(input) {
-        // accepts "1 Albert, 6 Benedict" or "Albert, Benedict"
         const parts = input
           .split(",")
           .map((s) => s.trim())
@@ -704,10 +737,8 @@
           return { bib: null, name: p, label: p };
         });
 
-        // sorting rule:
-        // - if all have bib numbers: sort by bib asc
-        // - else: sort by label alpha
-        const allHaveBib = parsed.length > 0 && parsed.every((x) => typeof x.bib === "number");
+        const allHaveBib =
+          parsed.length > 0 && parsed.every((x) => typeof x.bib === "number");
         parsed.sort((a, b) => {
           if (allHaveBib) return a.bib - b.bib;
           return a.label.localeCompare(b.label);
@@ -717,7 +748,6 @@
       }
 
       function buildParticipantMap(participantsArr) {
-        // store bib->name when bib exists, else store name->name
         const map = {};
         for (const p of participantsArr) {
           if (typeof p.bib === "number") map[String(p.bib)] = p.name;
@@ -726,18 +756,32 @@
         return map;
       }
 
+      function cssEscape(str) {
+        return String(str).replace(/"/g, '\\"').replace(/\\/g, "\\\\");
+      }
+
       /********************
        * Cloud check + group list
        ********************/
       async function checkCloudReachable() {
         try {
-          // tiny query; if key is bad, you'll get an error here
-          const { error } = await supabaseClient.from(COURSES_TABLE).select("group_name").limit(1);
+          const { error } = await supabaseClient
+            .from(COURSES_TABLE)
+            .select("group_name")
+            .limit(1);
           if (error) throw error;
-          setCloudStatus({ online: true, message: "Online: cloud is reachable.", syncState: "" });
+          setCloudStatus({
+            online: true,
+            message: "Online: cloud is reachable.",
+            syncState: "",
+          });
           return true;
         } catch (e) {
-          setCloudStatus({ online: false, message: "Offline: using local storage.", syncState: "" });
+          setCloudStatus({
+            online: false,
+            message: "Offline: using local storage.",
+            syncState: "",
+          });
           return false;
         }
       }
@@ -753,11 +797,14 @@
           .order("group_name", { ascending: true });
 
         if (error) {
-          setCloudStatus({ online: true, message: "Online, but cannot read cloud groups.", syncState: "bad" });
+          setCloudStatus({
+            online: true,
+            message: "Online, but cannot read cloud groups.",
+            syncState: "bad",
+          });
           return;
         }
 
-        // Populate dropdown
         const current = elSavedGroups.value;
         elSavedGroups.innerHTML = `<option value="">Select a saved group</option>`;
         for (const row of data || []) {
@@ -789,23 +836,29 @@
       }
 
       /********************
-       * Cloud: upsert evaluation mark
+       * Cloud: upsert evaluation mark  (Step 2 fix)
        ********************/
-      async function upsertEvaluationMark({ group_name, student, zone, task, mark }) {
-  const payload = {
-    group_name,
-    student,
-    zone,
-    task,
-    [EVAL_MARK_COL]: mark,
-  };
+      async function upsertEvaluationMark({
+        group_name,
+        student,
+        zone,
+        task,
+        mark,
+      }) {
+        const payload = {
+          group_name,
+          student,
+          zone,
+          task,
+          [EVAL_MARK_COL]: mark,
+        };
 
-  const { error } = await supabaseClient
-    .from(EVALS_TABLE)
-    .upsert(payload, { onConflict: EVAL_ON_CONFLICT });
+        const { error } = await supabaseClient
+          .from(EVALS_TABLE)
+          .upsert(payload, { onConflict: EVAL_ON_CONFLICT });
 
-  if (error) throw error;
-}
+        if (error) throw error;
+      }
 
       /********************
        * Pull group from cloud
@@ -822,7 +875,6 @@
           return;
         }
 
-        // Load course (participants)
         const { data: courseRows, error: courseErr } = await supabaseClient
           .from(COURSES_TABLE)
           .select("group_name,is_closed,participant_map")
@@ -843,18 +895,17 @@
         currentGroup = course.group_name;
         elGroupName.value = currentGroup;
 
-        // Convert participant_map into sorted participants
         const pm = course.participant_map || {};
         const entries = Object.entries(pm);
 
-        const allNumericKeys = entries.length > 0 && entries.every(([k]) => /^\d+$/.test(k));
+        const allNumericKeys =
+          entries.length > 0 && entries.every(([k]) => /^\d+$/.test(k));
         let derived = entries.map(([k, v]) => {
           if (allNumericKeys) {
             const bib = Number(k);
             const name = String(v || "").trim();
             return { bib, name, label: `${bib} ${name}` };
           }
-          // name-only
           const name = String(k).trim();
           return { bib: null, name, label: name };
         });
@@ -866,7 +917,6 @@
 
         participants = derived;
 
-        // Load marks from cloud
         const { data: evalRows, error: evalErr } = await supabaseClient
           .from(EVALS_TABLE)
           .select("group_name,student,zone,task," + EVAL_MARK_COL)
@@ -883,125 +933,165 @@
           }
         }
 
-        // Save locally and render
         saveMarksLocal();
-        renderGrid();
+        renderGrid(); // Step 3: renders both tables
         setHint("Pulled from cloud and saved locally.");
-        setCloudStatus({ online: true, message: "Online: cloud is reachable.", syncState: "ok" });
+        setCloudStatus({
+          online: true,
+          message: "Online: cloud is reachable.",
+          syncState: "ok",
+        });
       }
 
       /********************
-       * Render grid
+       * Render grid (Step 3 fix: Option A, 2 tables, no scroll jump)
        ********************/
       function renderGrid() {
-        elGrid.innerHTML = "";
+        setHint("");
 
-        // Header row 1
-        const tr1 = document.createElement("tr");
-        const thTask = document.createElement("th");
-        thTask.className = "taskHead";
-        thTask.textContent = "Task";
-        tr1.appendChild(thTask);
+        if (!elTaskTable || !elMarksTable) {
+          setHint("Render error: taskTable/marksTable not found in HTML.");
+          return;
+        }
 
+        // Preserve horizontal scroll position of marks pane
+        const oldScrollLeft = elMarksPane ? elMarksPane.scrollLeft : 0;
+
+        const taskThead = elTaskTable.querySelector("thead");
+        const taskTbody = elTaskTable.querySelector("tbody");
+        const marksThead = elMarksTable.querySelector("thead");
+        const marksTbody = elMarksTable.querySelector("tbody");
+
+        taskThead.innerHTML = "";
+        taskTbody.innerHTML = "";
+        marksThead.innerHTML = "";
+        marksTbody.innerHTML = "";
+
+        buildHeaderRows(taskThead, marksThead);
+
+        for (const z of ZONES) {
+          buildZoneRow(taskTbody, marksTbody, z);
+          for (const task of z.tasks) {
+            buildTaskRow(taskTbody, marksTbody, z.zone, task);
+          }
+        }
+
+        applyAllMarksToUI();
+
+        // Restore horizontal scroll position
+        if (elMarksPane) elMarksPane.scrollLeft = oldScrollLeft;
+      }
+
+      function buildHeaderRows(taskThead, marksThead) {
+        // Row 1
+        const tTr1 = document.createElement("tr");
+        const tTh1 = document.createElement("th");
+        tTh1.className = "taskHead";
+        tTh1.textContent = "Task";
+        tTr1.appendChild(tTh1);
+        taskThead.appendChild(tTr1);
+
+        const mTr1 = document.createElement("tr");
         for (const p of participants) {
           const th = document.createElement("th");
           th.className = "studentHead";
           th.colSpan = 3;
           th.textContent = p.label;
-          tr1.appendChild(th);
+          mTr1.appendChild(th);
         }
-        elGrid.appendChild(tr1);
+        marksThead.appendChild(mTr1);
 
-        // Header row 2: Inc/Con/Refi
-        const tr2 = document.createElement("tr");
-        const thBlank = document.createElement("th");
-        thBlank.className = "taskHead";
-        thBlank.textContent = "";
-        tr2.appendChild(thBlank);
+        // Row 2
+        const tTr2 = document.createElement("tr");
+        const tTh2 = document.createElement("th");
+        tTh2.className = "taskHead";
+        tTh2.textContent = "";
+        tTr2.appendChild(tTh2);
+        taskThead.appendChild(tTr2);
 
+        const mTr2 = document.createElement("tr");
         for (let i = 0; i < participants.length; i++) {
           const thInc = document.createElement("th");
           thInc.className = "subHead bgInc";
           thInc.textContent = "Inc";
-          tr2.appendChild(thInc);
+          mTr2.appendChild(thInc);
 
           const thCon = document.createElement("th");
           thCon.className = "subHead bgCon";
           thCon.textContent = "Con";
-          tr2.appendChild(thCon);
+          mTr2.appendChild(thCon);
 
           const thRef = document.createElement("th");
           thRef.className = "subHead bgRefi";
           thRef.textContent = "Refi";
-          tr2.appendChild(thRef);
+          mTr2.appendChild(thRef);
         }
-        elGrid.appendChild(tr2);
+        marksThead.appendChild(mTr2);
+      }
 
-        // Zones and tasks
-        for (const z of ZONES) {
-          // Zone header row
-          const zr = document.createElement("tr");
+      function buildZoneRow(taskTbody, marksTbody, zoneObj) {
+        // Left zone cell
+        const tTr = document.createElement("tr");
+        const tdZone = document.createElement("td");
+        tdZone.className = "zoneCell";
+        tdZone.innerHTML = `Zone ${zoneObj.zone}<span class="zoneSub">${zoneObj.title}</span>`;
 
-          const zc = document.createElement("td");
-          zc.className = "zoneCell";
-          zc.innerHTML = `Zone ${z.zone}<span class="zoneSub">${z.title}</span>`;
+        const infoBtn = document.createElement("span");
+        infoBtn.className = "infoBtn";
+        infoBtn.textContent = "i";
+        infoBtn.title = "Information";
+        infoBtn.addEventListener("click", () =>
+          openModal(zoneObj.infoTitle, zoneObj.infoBody)
+        );
+        tdZone.appendChild(infoBtn);
 
-          // info button
-          const infoBtn = document.createElement("span");
-          infoBtn.className = "infoBtn";
-          infoBtn.textContent = "i";
-          infoBtn.title = "Information";
-          infoBtn.addEventListener("click", () => openModal(z.infoTitle, z.infoBody));
-          zc.appendChild(infoBtn);
+        tTr.appendChild(tdZone);
+        taskTbody.appendChild(tTr);
 
-          zr.appendChild(zc);
+        // Right zone row (blank but aligned)
+        const mTr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = Math.max(1, participants.length * 3);
+        td.style.textAlign = "center";
+        td.style.fontWeight = "1000";
+        td.style.fontSize = "22px";
+        td.textContent = ""; // keep aligned; optional
+        mTr.appendChild(td);
+        marksTbody.appendChild(mTr);
+      }
 
-          for (const p of participants) {
-            const tdSpan = document.createElement("td");
-            tdSpan.colSpan = 3;
-            tdSpan.style.textAlign = "center";
-            tdSpan.style.fontWeight = "1000";
-            tdSpan.style.fontSize = "28px";
-            tdSpan.textContent = p.label;
-            zr.appendChild(tdSpan);
-          }
-          elGrid.appendChild(zr);
+      function buildTaskRow(taskTbody, marksTbody, zoneNumber, taskName) {
+        // Left task
+        const tTr = document.createElement("tr");
+        const tdTask = document.createElement("td");
+        tdTask.className = "taskCell";
+        tdTask.textContent = taskName;
+        tTr.appendChild(tdTask);
+        taskTbody.appendChild(tTr);
 
-          // Task rows
-          for (const task of z.tasks) {
-            const tr = document.createElement("tr");
-
-            const tdTask = document.createElement("td");
-            tdTask.className = "taskCell";
-            tdTask.textContent = task;
-            tr.appendChild(tdTask);
-
-            for (const p of participants) {
-              tr.appendChild(makeMarkCell(z.zone, task, p.label, "Inc"));
-              tr.appendChild(makeMarkCell(z.zone, task, p.label, "Con"));
-              tr.appendChild(makeMarkCell(z.zone, task, p.label, "Refi"));
-            }
-
-            elGrid.appendChild(tr);
-          }
+        // Right marks
+        const mTr = document.createElement("tr");
+        for (const p of participants) {
+          mTr.appendChild(makeMarkCell(zoneNumber, taskName, p.label, "Inc"));
+          mTr.appendChild(makeMarkCell(zoneNumber, taskName, p.label, "Con"));
+          mTr.appendChild(makeMarkCell(zoneNumber, taskName, p.label, "Refi"));
         }
+        marksTbody.appendChild(mTr);
       }
 
       function makeMarkCell(zone, task, studentLabel, colMark) {
         const td = document.createElement("td");
-        td.className = "markCell " + (colMark === "Inc" ? "bgInc" : colMark === "Con" ? "bgCon" : "bgRefi");
+        td.className =
+          "markCell " +
+          (colMark === "Inc" ? "bgInc" : colMark === "Con" ? "bgCon" : "bgRefi");
+
+        const key = marksKey(zone, task, studentLabel);
+        td.dataset.key = key;
+        td.dataset.mark = colMark;
 
         const box = document.createElement("div");
         box.className = "box";
-        box.textContent = ""; // tick handled by state
-
-        const key = marksKey(zone, task, studentLabel);
-        const current = marks[key] || "";
-
-        if (current === colMark) {
-          td.classList.add("checked");
-          box.textContent = "✓";
-        }
+        td.appendChild(box);
 
         td.addEventListener("click", async () => {
           if (!currentGroup) {
@@ -1009,27 +1099,29 @@
             return;
           }
 
-          // toggle: if clicking same mark, clear; else set to that mark
           const existing = marks[key] || "";
           const next = existing === colMark ? "" : colMark;
 
+          // Update state + local
           marks[key] = next;
           saveMarksLocal();
-          renderGrid();
 
-          // try cloud write
+          // Update only this key UI (no re-render, avoids scroll jump)
+          applyMarksToKeyUI(key);
+
+          // Cloud write
           const online = await checkCloudReachable();
           if (!online) {
-            setCloudStatus({ online: false, message: "Offline: using local storage.", syncState: "" });
+            setCloudStatus({
+              online: false,
+              message: "Offline: using local storage.",
+              syncState: "",
+            });
             return;
           }
 
           try {
-            // Write the course row too, so new groups exist in cloud and appear in dropdown
             await upsertCourseRow(currentGroup, participants);
-
-            // If cleared, store empty mark (keeps one row per student/task).
-            // If you prefer DELETE on clear, tell me and I will switch it.
             await upsertEvaluationMark({
               group_name: currentGroup,
               student: studentLabel,
@@ -1038,21 +1130,62 @@
               mark: next,
             });
 
-            setCloudStatus({ online: true, message: "Online: cloud is reachable.", syncState: "ok" });
-            // refresh cloud groups list in case group is new
+            setCloudStatus({
+              online: true,
+              message: "Online: cloud is reachable.",
+              syncState: "ok",
+            });
             refreshCloudGroupsDropdown();
           } catch (e) {
-  setCloudStatus({ online: true, message: "Online, but sync failed.", syncState: "bad" });
-  const msg =
-    (e && e.message) ? e.message :
-    (typeof e === "string") ? e :
-    JSON.stringify(e);
-  setHint("Sync failed: " + msg);
-}
+            setCloudStatus({
+              online: true,
+              message: "Online, but sync failed.",
+              syncState: "bad",
+            });
+            const msg =
+              e && e.message
+                ? e.message
+                : typeof e === "string"
+                ? e
+                : JSON.stringify(e);
+            setHint("Sync failed: " + msg);
+          }
         });
 
-        td.appendChild(box);
         return td;
+      }
+
+      function applyMarksToKeyUI(key) {
+        const chosen = marks[key] || "";
+        const cells = elMarksTable.querySelectorAll(
+          `td.markCell[data-key="${cssEscape(key)}"]`
+        );
+
+        cells.forEach((td) => {
+          const col = td.dataset.mark;
+          td.classList.remove("checked");
+          const box = td.querySelector(".box");
+          if (box) box.textContent = "";
+
+          if (chosen && col === chosen) {
+            td.classList.add("checked");
+            if (box) box.textContent = "✓";
+          }
+        });
+      }
+
+      function applyAllMarksToUI() {
+        const allCells = elMarksTable.querySelectorAll("td.markCell");
+        allCells.forEach((td) => {
+          td.classList.remove("checked");
+          const box = td.querySelector(".box");
+          if (box) box.textContent = "";
+        });
+
+        for (const [key, val] of Object.entries(marks || {})) {
+          if (!val) continue;
+          applyMarksToKeyUI(key);
+        }
       }
 
       /********************
@@ -1064,7 +1197,15 @@
           return;
         }
 
-        const header = ["Zone", "Task", ...participants.flatMap((p) => [p.label + " Inc", p.label + " Con", p.label + " Refi"])];
+        const header = [
+          "Zone",
+          "Task",
+          ...participants.flatMap((p) => [
+            p.label + " Inc",
+            p.label + " Con",
+            p.label + " Refi",
+          ]),
+        ];
         const rows = [header];
 
         for (const z of ZONES) {
@@ -1118,23 +1259,31 @@
         currentGroup = g;
         participants = parseParticipants(s);
 
-        // save participant list locally
-        localStorage.setItem(LS_PREFIX + "participants:" + currentGroup, JSON.stringify(participants));
+        localStorage.setItem(
+          LS_PREFIX + "participants:" + currentGroup,
+          JSON.stringify(participants)
+        );
         localStorage.setItem(LS_LAST_USED, currentGroup);
 
-        // ensure cloud group exists (optional but recommended)
         const online = await checkCloudReachable();
         if (online) {
           try {
             await upsertCourseRow(currentGroup, participants);
-            setCloudStatus({ online: true, message: "Online: cloud is reachable.", syncState: "ok" });
+            setCloudStatus({
+              online: true,
+              message: "Online: cloud is reachable.",
+              syncState: "ok",
+            });
             refreshCloudGroupsDropdown();
           } catch (e) {
-            setCloudStatus({ online: true, message: "Online, but could not save group to cloud.", syncState: "bad" });
+            setCloudStatus({
+              online: true,
+              message: "Online, but could not save group to cloud.",
+              syncState: "bad",
+            });
           }
         }
 
-        // load existing local marks if any
         loadMarksLocal(currentGroup);
         renderGrid();
         saveMarksLocal();
@@ -1149,7 +1298,9 @@
 
         currentGroup = g;
 
-        const pRaw = localStorage.getItem(LS_PREFIX + "participants:" + currentGroup);
+        const pRaw = localStorage.getItem(
+          LS_PREFIX + "participants:" + currentGroup
+        );
         participants = pRaw ? JSON.parse(pRaw) : [];
 
         loadMarksLocal(currentGroup);
@@ -1165,7 +1316,9 @@
         currentGroup = selected;
         elGroupName.value = currentGroup;
 
-        const pRaw = localStorage.getItem(LS_PREFIX + "participants:" + currentGroup);
+        const pRaw = localStorage.getItem(
+          LS_PREFIX + "participants:" + currentGroup
+        );
         participants = pRaw ? JSON.parse(pRaw) : [];
 
         loadMarksLocal(currentGroup);
@@ -1183,19 +1336,17 @@
        * Init
        ********************/
       (async function init() {
-        // initial statuses
         setCloudStatus({ online: false, message: "Checking cloud...", syncState: "" });
-
-        // populate cloud groups
         await refreshCloudGroupsDropdown();
 
-        // restore last used group locally (if any)
         const last = localStorage.getItem(LS_LAST_USED);
         if (last) {
           elGroupName.value = last;
           currentGroup = last;
 
-          const pRaw = localStorage.getItem(LS_PREFIX + "participants:" + currentGroup);
+          const pRaw = localStorage.getItem(
+            LS_PREFIX + "participants:" + currentGroup
+          );
           participants = pRaw ? JSON.parse(pRaw) : [];
 
           loadMarksLocal(currentGroup);
