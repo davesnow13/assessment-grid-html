@@ -1030,9 +1030,11 @@
         elMarksTable.appendChild(marksThead);
         elMarksTable.appendChild(marksTbody);
 
-        // After rendering, force row heights to match
+       // After rendering, force row heights to match and restore scroll
         requestAnimationFrame(() => {
           syncRowHeights();
+          if (yScroller) yScroller.scrollTop = savedScrollY;
+          if (xScroller) xScroller.scrollLeft = savedScrollX;
         });
       }
 
