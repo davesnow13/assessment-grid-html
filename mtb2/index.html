@@ -1226,16 +1226,21 @@
         await refreshCloudGroupsDropdown();
 
         const last = localStorage.getItem(LS_LAST_USED);
-        if (last) {
-          elGroupName.value = last;
-          currentGroup = last;
+if (last) {
+  elGroupName.value = last;
+  currentGroup = last;
 
-          const pRaw = localStorage.getItem(LS_PREFIX + "participants:" + currentGroup);
-          participants = pRaw ? JSON.parse(pRaw) : [];
+  const pRaw = localStorage.getItem(LS_PREFIX + "participants:" + currentGroup);
+  participants = pRaw ? JSON.parse(pRaw) : [];
 
-          loadMarksLocal(currentGroup);
-          if (participants.length > 0) renderGrid();
-        }
+  loadMarksLocal(currentGroup);
+  if (participants.length > 0) {
+    renderGrid();
+  } else {
+    // No local participants for this group yet — try to pull from the cloud.
+    pullGroupFromCloud(currentGroup);
+  }
+}
       })();
     </script>
   </body>
