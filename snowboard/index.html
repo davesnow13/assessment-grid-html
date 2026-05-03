@@ -936,6 +936,12 @@
        * Render grid (Option A: two synchronized tables)
        ********************/
       function renderGrid() {
+        // Save scroll positions so the grid doesn't jump on re-render
+        const yScroller = document.getElementById("gridYScroll");
+        const xScroller = document.getElementById("marksPane");
+        const savedScrollY = yScroller ? yScroller.scrollTop : 0;
+        const savedScrollX = xScroller ? xScroller.scrollLeft : 0;
+
         elTaskTable.innerHTML = "";
         elMarksTable.innerHTML = "";
 
