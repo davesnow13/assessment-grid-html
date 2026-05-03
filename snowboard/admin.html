@@ -217,7 +217,7 @@
       clearMessage();
       try {
         const { data: courseData, error: courseError } = await db
-          .from("courses")
+          .from("courses_snowboard")
           .select("group_name, is_closed")
           .order("group_name", { ascending: true });
 
